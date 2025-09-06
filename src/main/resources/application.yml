@@ -1,0 +1,55 @@
+spring:
+  application:
+    name: Findex
+  datasource:
+    url: jdbc:postgresql://localhost:5432/
+    username:
+    password:
+    driver-class-name: org.postgresql.Driver
+  servlet:
+    multipart:
+      maxFileSize: 100MB # ?? ??? ?? ??
+      maxRequestSize: 300MB  # ? ?? ?? ??? ?? ??
+
+  # JPA
+  jpa:
+    hibernate:
+      ddl-auto: validate
+      # create, create-drop, update, validate, none
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        highlight_sql: true
+        use_sql_comments: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        physical_naming_strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+        jdbc.time_zone: UTC
+
+# swagger
+springdoc:
+  api-docs:
+    enabled: true
+    path: /api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    display-request-duration: true
+    persist-authorization: true
+
+# log
+logging:
+  level:
+    # Hibernate SQL
+    org.hibernate.SQL: off
+    org.hibernate.orm.jdbc.bind: trace
+    org.hibernate.type.descriptor.sql: trace
+
+    # Spring Web
+    org.springframework.web: trace
+    org.springframework.web.filter.CommonsRequestLoggingFilter: DEBUG
+
+  pattern:
+    console: "%d{HH:mm:ss} %-5level %logger{36} - %msg%n"
+
+
