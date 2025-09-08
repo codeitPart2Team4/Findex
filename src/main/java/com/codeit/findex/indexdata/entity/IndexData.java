@@ -1,6 +1,6 @@
 package com.codeit.findex.indexdata.entity;
 
-import com.codeit.findex.common.model.SourceType;
+import com.codeit.findex.common.enums.SourceType;
 import com.codeit.findex.indexinfo.entity.IndexInfo;
 import jakarta.persistence.*;
 import lombok.*;
@@ -25,17 +25,17 @@ public class IndexData {
   @JoinColumn(name = "index_info_id", nullable = false)
   private IndexInfo indexInfo;
 
-  private LocalDate baseDate;          // → base_date
+  private LocalDate baseDate;
   @Enumerated(EnumType.STRING)
-  private SourceType sourceType;       // → source_type
+  private SourceType sourceType;
 
-  private Double marketPrice;          // → market_price
-  private Double closingPrice;         // → closing_price
-  private Double highPrice;            // → high_price
-  private Double lowPrice;             // → low_price
-  private Double versus;               // → versus
-  private Double fluctuationRate;      // → fluctuation_rate
-  private Long tradingQuantity;        // → trading_quantity
-  private Long tradingPrice;           // → trading_price
-  private Long marketTotalAmount;      // → market_total_amount
+  private Double marketPrice;
+  private Double closingPrice;
+  private Double highPrice;
+  private Double lowPrice;
+  private Double versus;
+  private Double fluctuationRate;
+  private Long tradingQuantity;
+  private Long tradingPrice;
+  private Long marketTotalAmount;
 }
