@@ -1,4 +1,7 @@
 package com.codeit.findex.indexinfo.dto;
 
-public class IndexInfoSummaryDto {
-}
+public record IndexInfoSummaryDto(
+        Long id,
+        String indexClassification,
+        String indexName
+) {}
