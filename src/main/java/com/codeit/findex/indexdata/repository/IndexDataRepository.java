@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface IndexDataRepository
-    extends JpaRepository<IndexData, Long>, IndexDataRepositoryCustom {
+    extends JpaRepository<IndexData, Long>, IndexDataQueryRepository {
 
   Optional<IndexData> findByIndexInfo_IdAndBaseDate(Long indexInfoId, LocalDate baseDate);
 
