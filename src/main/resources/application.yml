@@ -52,4 +52,7 @@ logging:
   pattern:
     console: "%d{HH:mm:ss} %-5level %logger{36} - %msg%n"
 
-
+# API-KEY
+findex:
+  api:
+    key: ${FINDEX_API_KEY}
