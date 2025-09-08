@@ -1,4 +1,6 @@
 package com.codeit.findex.syncjob.controller;
 
-public class SyncJobController {
-}
+import org.springframework.web.bind.annotation.*;
+
+@RestController @RequestMapping("/api/sync-jobs")
+public class SyncJobController { /* TODO */ }
