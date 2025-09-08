@@ -4,6 +4,10 @@ import java.util.List;
 
 public record IndexChartDto(
     Long indexInfoId,
+    String indexClassification,
     String indexName,
-    List<ChartPoint> dataPoints
-) {}
+    String periodType,                  // DAILY/WEEKLY/MONTHLY/QUARTERLY/YEARLY
+    List<ChartPoint> dataPoints,       // {date, value}
+    List<ChartPoint> ma5DataPoints,    // {date, value}
+    List<ChartPoint> ma20DataPoints    // {date, value}
+) { }
