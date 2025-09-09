@@ -11,7 +11,6 @@ import com.codeit.findex.indexinfo.entity.IndexInfo;
 import com.codeit.findex.indexinfo.mapper.IndexInfoMapper;
 import com.codeit.findex.indexinfo.repository.IndexInfoRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,8 +43,7 @@ public class IndexInfoService {
                 request.basePointInTime(),
                 request.baseIndex(),
                 SourceType.USER,
-                request.favorite(),
-                request.autoSyncEnabled()
+                request.favorite()
         );
 
         return indexInfoMapper.toDto(indexInfoRepository.save(indexInfo));
@@ -66,7 +64,7 @@ public class IndexInfoService {
             SortDirection sortDirection,
             int size
     ) {
-        Page<IndexInfo> page = indexInfoRepository.findAllByConditions(
+        List<IndexInfo> entities = indexInfoRepository.findAllByConditions(
                 indexClassification,
                 indexName,
                 favorite,
@@ -76,23 +74,50 @@ public class IndexInfoService {
                 size
         );
 
-        List<IndexInfoDto> dtos = page.getContent().stream()
+        boolean hasNext = entities.size() > size;
+
+        if (hasNext) {
+            entities = entities.subList(0, size);
+        }
+
+        List<IndexInfoDto> dtos = entities.stream()
                 .map(indexInfoMapper::toDto)
                 .toList();
 
-        String nextCursor = page.hasNext() && !page.getContent().isEmpty()
-                ? buildCursor(page.getContent().get(page.getContent().size() - 1), sortField)
-                : null;
+        String nextCursor = null;
+        if (hasNext && !entities.isEmpty()) {
+            IndexInfo last = entities.get(entities.size() - 1);
+            nextCursor = buildCursor(last, sortField);
+        }
+
+        long totalElements = indexInfoRepository.countByConditions(
+                indexClassification,
+                indexName,
+                favorite
+        );
 
         return new PageResponse<>(
                 dtos,
                 nextCursor,
                 size,
-                page.getTotalElements(),
-                page.hasNext()
+                totalElements,
+                hasNext
         );
     }
 
+    private String buildCursor(IndexInfo entity, String sortField) {
+        if ("indexClassification".equals(sortField)) {
+            return entity.getIndexClassification() + ":" + entity.getId();
+
+        } else if ("indexName".equals(sortField)) {
+            return entity.getIndexName() + ":" + entity.getId();
+
+        } else if ("employedItemsCount".equals(sortField)) {
+            return entity.getEmployedItemsCount() + ":" + entity.getId();
+        }
+
+        return String.valueOf(entity.getId());
+    }
 
     public List<IndexInfoSummaryDto> findSummaryList() {
         return indexInfoRepository.findAll()
@@ -129,19 +154,5 @@ public class IndexInfoService {
                 .orElseThrow(NoSuchElementException::new); // 후에 개별 에러로 바꿔야함 - NotFound
 
         indexInfoRepository.deleteById(id);
-    }
-
-    private String buildCursor(IndexInfo entity, String sortField) {
-        if ("indexClassification".equals(sortField)) {
-            return entity.getIndexClassification() + ":" + entity.getId();
-
-        } else if ("indexName".equals(sortField)) {
-            return entity.getIndexName() + ":" + entity.getId();
-
-        } else if ("employedItemsCount".equals(sortField)) {
-            return entity.getEmployedItemsCount() + ":" + entity.getId();
-        }
-
-        return String.valueOf(entity.getId());
     }
 }
