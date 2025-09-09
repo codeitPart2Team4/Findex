@@ -37,9 +37,6 @@ public class IndexInfo extends BaseEntity {
     @Column(nullable = false)
     private Boolean favorite = false;
 
-    @Column(nullable = false)
-    private Boolean autoSyncEnabled = false;
-
     public void changeEmployedItemsCount(Integer employedItemsCount) {
         this.employedItemsCount = employedItemsCount;
     }
@@ -54,9 +51,5 @@ public class IndexInfo extends BaseEntity {
 
     public void changeFavorite(Boolean favorite) {
         this.favorite = favorite;
-    }
-
-    public void changeAutoSyncEnabled(Boolean autoSyncEnabled) {
-        this.autoSyncEnabled = autoSyncEnabled;
     }
 }
