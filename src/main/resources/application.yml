@@ -3,8 +3,8 @@ spring:
     name: Findex
   datasource:
     url: jdbc:postgresql://localhost:5432/
-    username:
-    password:
+    username: postgres
+    password: 1234
     driver-class-name: org.postgresql.Driver
   servlet:
     multipart:
@@ -14,7 +14,7 @@ spring:
   # JPA
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
       # create, create-drop, update, validate, none
     show-sql: true
     properties:
@@ -55,4 +55,5 @@ logging:
 # API-KEY
 findex:
   api:
+    url: 'https://apis.data.go.kr/1160100/service/GetMarketIndexInfoService'
     key: ${FINDEX_API_KEY}
