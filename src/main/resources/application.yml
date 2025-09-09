@@ -2,7 +2,7 @@ spring:
   application:
     name: Findex
   datasource:
-    url: jdbc:postgresql://localhost:5432/
+    url: jdbc:postgresql://localhost:5432/findex
     username: postgres
     password: 1234
     driver-class-name: org.postgresql.Driver
@@ -49,11 +49,12 @@ logging:
     org.springframework.web: trace
     org.springframework.web.filter.CommonsRequestLoggingFilter: DEBUG
 
+
   pattern:
     console: "%d{HH:mm:ss} %-5level %logger{36} - %msg%n"
 
 # API-KEY
 findex:
   api:
-    url: 'https://apis.data.go.kr/1160100/service/GetMarketIndexInfoService'
+    url: ${FINDEX_URL}
     key: ${FINDEX_API_KEY}
