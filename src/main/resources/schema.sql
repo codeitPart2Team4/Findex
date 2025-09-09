@@ -1,4 +1,6 @@
-drop table index_info;
+drop table index_info cascade ;
+drop table index_data cascade ;
+drop table sync_job  cascade ;
 
 -- ===============================
 -- Table: IndexInfo (지수 정보)
@@ -93,74 +95,126 @@ VALUES
 
 select count(*) from index_info;
 
--- 기존 데이터 비우기(원하면)
--- TRUNCATE TABLE index_data;
+CREATE TABLE IF NOT EXISTS index_info (
+                                          id BIGSERIAL PRIMARY KEY,
+                                          index_classification VARCHAR(100) NOT NULL,        -- 예: KOSPI시리즈 / KRX시리즈 / KOSDAQ시리즈 / 테마지수 / 주가지수 / 업종지수
+                                          index_name           VARCHAR(200) NOT NULL UNIQUE, -- 지수명(단독 유니크)
+                                          employed_items_count INT,
+                                          base_point_in_time   DATE,
+                                          base_index           DOUBLE PRECISION,
+                                          source_type          VARCHAR(20) NOT NULL,         -- 'USER' | 'OPEN_API'
+                                          favorite             BOOLEAN NOT NULL DEFAULT FALSE,
+                                          auto_sync_enabled    BOOLEAN NOT NULL DEFAULT FALSE,
 
--- 중복 방지 (지수+날짜 유니크)
-DO $$
-    BEGIN
-        IF NOT EXISTS (
-            SELECT 1 FROM pg_indexes
-            WHERE schemaname = 'public' AND indexname = 'ux_index_data_info_date'
-        ) THEN
-            CREATE UNIQUE INDEX ux_index_data_info_date
-                ON index_data(index_info_id, base_date);
-        END IF;
-    END $$;
+                                          CONSTRAINT chk_index_info_source_type
+                                              CHECK (source_type IN ('USER','OPEN_API')),
 
--- ===============================
--- IndexData 샘플 (id=1: 코스피)
--- ===============================
+    -- 드롭다운에서 쓰는 분류값들을 허용
+                                          CONSTRAINT chk_index_info_classification
+                                              CHECK (index_classification IN ('주가지수','업종지수','테마지수','KOSPI시리즈','KOSDAQ시리즈','KRX시리즈'))
+);
+
+-- 조회/검색 성능
+CREATE INDEX IF NOT EXISTS idx_index_info__class_name
+    ON index_info (index_classification, index_name);
+
+WITH idx AS (
+    SELECT id FROM index_info WHERE index_name = 'KRX300'
+)
 INSERT INTO index_data
 (index_info_id, base_date, source_type,
  market_price, closing_price, high_price, low_price,
  versus, fluctuation_rate, trading_quantity, trading_price, market_total_amount)
-VALUES
--- 2024-09-01 ~ 2024-09-07
-(1,'2024-09-01','OPEN_API',2500.10,2505.00,2516.00,2490.50,  5.00,  0.20, 350000000,  9500000000000, 2000000000000),
-(1,'2024-09-02','OPEN_API',2506.20,2512.30,2520.00,2501.00,  7.30,  0.29, 360000000,  9700000000000, 2005000000000),
-(1,'2024-09-03','OPEN_API',2510.00,2508.10,2515.70,2498.50, -4.20, -0.17, 355000000,  9600000000000, 1999000000000),
-(1,'2024-09-04','OPEN_API',2507.90,2520.40,2523.80,2504.20, 12.30,  0.49, 365000000,  9800000000000, 2010000000000),
-(1,'2024-09-05','OPEN_API',2519.80,2523.10,2530.50,2512.00,  2.70,  0.11, 370000000,  9850000000000, 2013000000000),
-(1,'2024-09-06','OPEN_API',2522.00,2517.60,2525.20,2511.30, -5.50, -0.22, 340000000,  9400000000000, 2007000000000),
-(1,'2024-09-07','OPEN_API',2516.00,2528.90,2534.00,2510.50, 11.30,  0.45, 380000000, 10000000000000, 2020000000000);
+SELECT
+    idx.id, DATE '2025-09-08', 'OPEN_API',
+    1218.33, 1220.33, 1224.33, 1216.33,
+    0.00, 0.00, 90000000, 4500000000000, 90000000000000
+FROM idx
+ON CONFLICT ON CONSTRAINT uk_index_info_base_date DO NOTHING;
 
--- ===============================
--- IndexData 샘플 (id=2: 코스닥)
--- ===============================
+WITH d AS (
+    SELECT generate_series(DATE '2025-09-03', DATE '2025-09-09', INTERVAL '1 day')::date AS base_date
+),
+     g AS (
+         SELECT i.id AS index_info_id, i.base_index, d.base_date
+         FROM index_info i CROSS JOIN d
+     ),
+     p AS (
+         SELECT
+             index_info_id,
+             base_date,
+             'OPEN_API'::varchar AS source_type,
+             ROUND( (base_index * (1 + (random()-0.5)*0.015))::numeric, 2 ) AS closing_price,
+             ROUND( (base_index * (1 + (random()-0.5)*0.015))::numeric, 2 ) AS market_price
+         FROM g
+     ),
+     calc AS (
+         SELECT
+             index_info_id,
+             base_date,
+             source_type,
+             market_price,
+             closing_price,
+             GREATEST(market_price, closing_price) + ROUND( (random()*5)::numeric, 2 ) AS high_price,
+             LEAST(market_price,  closing_price)  - ROUND( (random()*5)::numeric, 2 ) AS low_price,
+             LAG(closing_price) OVER (PARTITION BY index_info_id ORDER BY base_date) AS prev_close
+         FROM p
+     ),
+     final AS (
+         SELECT
+             index_info_id,
+             base_date,
+             source_type,
+             market_price,
+             closing_price,
+             high_price,
+             low_price,
+             ROUND(COALESCE(closing_price - prev_close, 0)::numeric, 2) AS versus,
+             ROUND(
+                     CASE WHEN prev_close IS NULL OR prev_close = 0 THEN 0
+                          ELSE ((closing_price - prev_close) / prev_close * 100)::numeric
+                         END, 2
+             ) AS fluctuation_rate,
+             (50000000 + floor(random()*120000000))::bigint AS trading_quantity,
+             (6000000000000 + floor(random()*3000000000000))::bigint AS trading_price,
+             (70000000000000 + floor(random()*40000000000000))::bigint AS market_total_amount
+         FROM calc
+     )
 INSERT INTO index_data
 (index_info_id, base_date, source_type,
  market_price, closing_price, high_price, low_price,
  versus, fluctuation_rate, trading_quantity, trading_price, market_total_amount)
-VALUES
-    (2,'2024-09-01','OPEN_API', 820.20, 822.50, 826.00, 818.00,  2.30,  0.28, 120000000,  1500000000000,  350000000000),
-    (2,'2024-09-02','OPEN_API', 822.00, 819.40, 823.50, 816.50, -3.10, -0.38, 115000000,  1450000000000,  348000000000),
-    (2,'2024-09-03','OPEN_API', 819.00, 825.20, 827.80, 818.10,  5.80,  0.71, 125000000,  1520000000000,  353000000000),
-    (2,'2024-09-04','OPEN_API', 826.00, 828.30, 830.50, 823.40,  3.10,  0.38, 130000000,  1550000000000,  356000000000),
-    (2,'2024-09-05','OPEN_API', 828.00, 826.10, 829.40, 824.00, -2.20, -0.27, 118000000,  1480000000000,  354000000000),
-    (2,'2024-09-06','OPEN_API', 826.50, 832.40, 834.20, 825.30,  6.30,  0.76, 135000000,  1600000000000,  358000000000),
-    (2,'2024-09-07','OPEN_API', 832.00, 831.10, 835.00, 829.20, -1.30, -0.16, 110000000,  1420000000000,  357000000000);
+SELECT * FROM final
+ON CONFLICT ON CONSTRAINT uk_index_info_base_date DO UPDATE
+    SET market_price        = EXCLUDED.market_price,
+        closing_price       = EXCLUDED.closing_price,
+        high_price          = EXCLUDED.high_price,
+        low_price           = EXCLUDED.low_price,
+        versus              = EXCLUDED.versus,
+        fluctuation_rate    = EXCLUDED.fluctuation_rate,
+        trading_quantity    = EXCLUDED.trading_quantity,
+        trading_price       = EXCLUDED.trading_price,
+        market_total_amount = EXCLUDED.market_total_amount;
 
--- ===============================
--- IndexData 샘플 (id=3: 코스피200)
--- ===============================
-INSERT INTO index_data
-(index_info_id, base_date, source_type,
- market_price, closing_price, high_price, low_price,
- versus, fluctuation_rate, trading_quantity, trading_price, market_total_amount)
-VALUES
-    (3,'2024-09-01','OPEN_API', 330.10, 331.20, 332.30, 329.50,  1.10,  0.33,  45000000,  580000000000, 120000000000),
-    (3,'2024-09-02','OPEN_API', 331.00, 330.40, 331.90, 329.80, -0.80, -0.24,  42000000,  560000000000, 119500000000),
-    (3,'2024-09-03','OPEN_API', 330.50, 332.10, 333.20, 330.10,  1.70,  0.51,  47000000,  600000000000, 121000000000),
-    (3,'2024-09-04','OPEN_API', 332.00, 333.80, 334.40, 331.50,  1.70,  0.51,  49000000,  620000000000, 121800000000),
-    (3,'2024-09-05','OPEN_API', 333.50, 334.10, 335.10, 332.90,  0.30,  0.09,  43000000,  555000000000, 122000000000),
-    (3,'2024-09-06','OPEN_API', 334.00, 333.00, 334.60, 332.20, -1.10, -0.33,  41000000,  530000000000, 121500000000),
-    (3,'2024-09-07','OPEN_API', 333.10, 335.50, 336.20, 332.80,  2.50,  0.75,  52000000,  640000000000, 122800000000);
+-- 전체 건수
+SELECT COUNT(*) FROM index_data;
 
--- 확인
-SELECT index_info_id, COUNT(*) AS rows_per_index
-FROM index_data
-GROUP BY index_info_id
-ORDER BY index_info_id;
+-- KRX300 최근 10일
+SELECT i.index_name, d.base_date, d.closing_price
+FROM index_data d
+         JOIN index_info i ON i.id = d.index_info_id
+WHERE i.index_name = 'KRX300'
+ORDER BY d.base_date DESC
+LIMIT 10;
 
-SELECT id, index_name FROM index_info ORDER BY id;
+SELECT i.index_name, COUNT(*) cnt, MIN(d.base_date) min_dt, MAX(d.base_date) max_dt
+FROM index_data d
+         JOIN index_info i ON i.id = d.index_info_id
+WHERE i.index_name = 'KRX300'
+GROUP BY i.index_name;
+
+ALTER TABLE index_data
+    ADD CONSTRAINT uk_index_info_base_date UNIQUE (index_info_id, base_date);
+
+CREATE INDEX IF NOT EXISTS idx_index_data__ix_date
+    ON index_data (index_info_id, base_date DESC);
