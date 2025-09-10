@@ -2,11 +2,14 @@ package com.codeit.findex.indexinfo.entity;
 
 import com.codeit.findex.common.entity.BaseEntity;
 import com.codeit.findex.common.enums.SourceType;
+import com.codeit.findex.indexdata.entity.IndexData;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "index_info")
@@ -34,8 +37,18 @@ public class IndexInfo extends BaseEntity {
     @Column(nullable = false)
     private Boolean favorite = false;
 
-    @Column(nullable = false)
-    private Boolean autoSyncEnabled = false;
+    @OneToMany(mappedBy = "indexInfo", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<IndexData> indexDataList = new ArrayList<>();
+
+    public IndexInfo(String indexClassification, String indexName, Integer employedItemsCount, LocalDate basePointInTime, BigDecimal baseIndex, SourceType sourceType, Boolean favorite) {
+        this.indexClassification = indexClassification;
+        this.indexName = indexName;
+        this.employedItemsCount = employedItemsCount;
+        this.basePointInTime = basePointInTime;
+        this.baseIndex = baseIndex;
+        this.sourceType = sourceType;
+        this.favorite = favorite;
+    }
 
     public void changeEmployedItemsCount(Integer employedItemsCount) {
         this.employedItemsCount = employedItemsCount;
@@ -51,9 +64,5 @@ public class IndexInfo extends BaseEntity {
 
     public void changeFavorite(Boolean favorite) {
         this.favorite = favorite;
-    }
-
-    public void changeAutoSyncEnabled(Boolean autoSyncEnabled) {
-        this.autoSyncEnabled = autoSyncEnabled;
     }
 }

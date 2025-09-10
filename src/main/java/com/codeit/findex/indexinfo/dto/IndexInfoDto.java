@@ -13,6 +13,5 @@ public record IndexInfoDto(
         LocalDate basePointInTime,
         BigDecimal baseIndex,
         SourceType sourceType,
-        Boolean favorite,
-        Boolean autoSyncEnabled
+        Boolean favorite
 ) {}

@@ -1,4 +1,5 @@
 package com.codeit.findex.autosync.dto;
 
-public class AutoSyncConfigUpdateRequest {
-}
+public record AutoSyncConfigUpdateRequest(
+        boolean enabled
+) {}

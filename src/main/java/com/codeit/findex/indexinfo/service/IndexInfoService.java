@@ -1,7 +1,10 @@
 package com.codeit.findex.indexinfo.service;
 
+import com.codeit.findex.autosync.entity.AutoSyncConfig;
+import com.codeit.findex.autosync.repository.AutoSyncConfigRepository;
 import com.codeit.findex.common.dto.PageResponse;
 import com.codeit.findex.common.enums.SourceType;
+import com.codeit.findex.common.error.exception.IndexInfoException;
 import com.codeit.findex.indexinfo.dto.IndexInfoCreateRequest;
 import com.codeit.findex.indexinfo.dto.IndexInfoDto;
 import com.codeit.findex.indexinfo.dto.IndexInfoSummaryDto;
@@ -11,12 +14,12 @@ import com.codeit.findex.indexinfo.entity.IndexInfo;
 import com.codeit.findex.indexinfo.mapper.IndexInfoMapper;
 import com.codeit.findex.indexinfo.repository.IndexInfoRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.NoSuchElementException;
+
+import static com.codeit.findex.common.error.errorcode.IndexInfoErrorCode.*;
 
 @Service
 @Transactional
@@ -27,14 +30,14 @@ public class IndexInfoService {
 
     private final IndexInfoMapper indexInfoMapper;
 
-    public IndexInfoDto create(IndexInfoCreateRequest request) {
+    private final AutoSyncConfigRepository autoSyncConfigRepository;  // 기본 auto-sync 비활성화상태 설정을 위한 추가
 
+    public IndexInfoDto create(IndexInfoCreateRequest request) {
         if (indexInfoRepository.existsByIndexClassificationAndIndexName(
                 request.indexClassification(),
                 request.indexName())
         ) {
-            // 후에 개별 에러로 바꿔야함 - Duplicated
-            throw new IllegalStateException();
+            throw new IndexInfoException(INDEX_INFO_DUPLICATED);
         }
 
         IndexInfo indexInfo = new IndexInfo(
@@ -44,9 +47,17 @@ public class IndexInfoService {
                 request.basePointInTime(),
                 request.baseIndex(),
                 SourceType.USER,
-                request.favorite(),
-                request.autoSyncEnabled()
+                request.favorite()
         );
+
+        // 신규 생성시 자동 연동 설정도 비활성화 상태로 생성
+        autoSyncConfigRepository.save(
+                AutoSyncConfig.builder()
+                        .indexInfo(indexInfo)
+                        .enabled(false)
+                        .build()
+        );
+
 
         return indexInfoMapper.toDto(indexInfoRepository.save(indexInfo));
     }
@@ -54,7 +65,7 @@ public class IndexInfoService {
     public IndexInfoDto findById(Long indexInfoId) {
         return indexInfoMapper.toDto(indexInfoRepository
                 .findById(indexInfoId)
-                .orElseThrow(NoSuchElementException::new));
+                .orElseThrow(() -> new IndexInfoException(INDEX_INFO_NOTFOUND)));
     }
 
     public PageResponse<IndexInfoDto> getIndexInfos(
@@ -66,7 +77,7 @@ public class IndexInfoService {
             SortDirection sortDirection,
             int size
     ) {
-        Page<IndexInfo> page = indexInfoRepository.findAllByConditions(
+        List<IndexInfo> entities = indexInfoRepository.findAllByConditions(
                 indexClassification,
                 indexName,
                 favorite,
@@ -76,23 +87,50 @@ public class IndexInfoService {
                 size
         );
 
-        List<IndexInfoDto> dtos = page.getContent().stream()
+        boolean hasNext = entities.size() > size;
+
+        if (hasNext) {
+            entities = entities.subList(0, size);
+        }
+
+        List<IndexInfoDto> dtos = entities.stream()
                 .map(indexInfoMapper::toDto)
                 .toList();
 
-        String nextCursor = page.hasNext() && !page.getContent().isEmpty()
-                ? buildCursor(page.getContent().get(page.getContent().size() - 1), sortField)
-                : null;
+        String nextCursor = null;
+        if (hasNext && !entities.isEmpty()) {
+            IndexInfo last = entities.get(entities.size() - 1);
+            nextCursor = buildCursor(last, sortField);
+        }
+
+        long totalElements = indexInfoRepository.countByConditions(
+                indexClassification,
+                indexName,
+                favorite
+        );
 
         return new PageResponse<>(
                 dtos,
                 nextCursor,
                 size,
-                page.getTotalElements(),
-                page.hasNext()
+                totalElements,
+                hasNext
         );
     }
 
+    private String buildCursor(IndexInfo entity, String sortField) {
+        if ("indexClassification".equals(sortField)) {
+            return entity.getIndexClassification() + ":" + entity.getId();
+
+        } else if ("indexName".equals(sortField)) {
+            return entity.getIndexName() + ":" + entity.getId();
+
+        } else if ("employedItemsCount".equals(sortField)) {
+            return entity.getEmployedItemsCount() + ":" + entity.getId();
+        }
+
+        return String.valueOf(entity.getId());
+    }
 
     public List<IndexInfoSummaryDto> findSummaryList() {
         return indexInfoRepository.findAll()
@@ -103,7 +141,7 @@ public class IndexInfoService {
 
     public IndexInfoDto update(Long indexInfoId, IndexInfoUpdateRequest request) {
         IndexInfo indexInfo = indexInfoRepository.findById(indexInfoId)
-                .orElseThrow(NoSuchElementException::new); // 후에 개별 에러로 바꿔야함 - NotFound
+                .orElseThrow(() -> new IndexInfoException(INDEX_INFO_NOTFOUND));
 
         if (request.employedItemsCount() != null) {
             indexInfo.changeEmployedItemsCount(request.employedItemsCount());
@@ -125,23 +163,11 @@ public class IndexInfoService {
     }
 
     public void delete(Long id) {
+        // IndexInfo -> IndexData CascadeType 설정
+        // IndexInfo.java 참고
         indexInfoRepository.findById(id)
-                .orElseThrow(NoSuchElementException::new); // 후에 개별 에러로 바꿔야함 - NotFound
+                .orElseThrow(() -> new IndexInfoException(INDEX_INFO_NOTFOUND));
 
         indexInfoRepository.deleteById(id);
-    }
-
-    private String buildCursor(IndexInfo entity, String sortField) {
-        if ("indexClassification".equals(sortField)) {
-            return entity.getIndexClassification() + ":" + entity.getId();
-
-        } else if ("indexName".equals(sortField)) {
-            return entity.getIndexName() + ":" + entity.getId();
-
-        } else if ("employedItemsCount".equals(sortField)) {
-            return entity.getEmployedItemsCount() + ":" + entity.getId();
-        }
-
-        return String.valueOf(entity.getId());
     }
 }

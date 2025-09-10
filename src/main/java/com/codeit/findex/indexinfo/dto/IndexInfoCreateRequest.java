@@ -10,6 +10,5 @@ public record IndexInfoCreateRequest (
     Integer employedItemsCount,
     LocalDate basePointInTime,
     BigDecimal baseIndex,
-    Boolean favorite,
-    Boolean autoSyncEnabled
+    Boolean favorite
 ) {}
