@@ -2,19 +2,20 @@ package com.codeit.findex.indexinfo.entity;
 
 import com.codeit.findex.common.entity.BaseEntity;
 import com.codeit.findex.common.enums.SourceType;
+import com.codeit.findex.indexdata.entity.IndexData;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "index_info")
 @Getter
-@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class IndexInfo extends BaseEntity {
 
@@ -36,6 +37,19 @@ public class IndexInfo extends BaseEntity {
 
     @Column(nullable = false)
     private Boolean favorite = false;
+
+    @OneToMany(mappedBy = "indexInfo", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<IndexData> indexDataList = new ArrayList<>();
+
+    public IndexInfo(String indexClassification, String indexName, Integer employedItemsCount, LocalDate basePointInTime, BigDecimal baseIndex, SourceType sourceType, Boolean favorite) {
+        this.indexClassification = indexClassification;
+        this.indexName = indexName;
+        this.employedItemsCount = employedItemsCount;
+        this.basePointInTime = basePointInTime;
+        this.baseIndex = baseIndex;
+        this.sourceType = sourceType;
+        this.favorite = favorite;
+    }
 
     public void changeEmployedItemsCount(Integer employedItemsCount) {
         this.employedItemsCount = employedItemsCount;
