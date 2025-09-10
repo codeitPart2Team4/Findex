@@ -37,18 +37,23 @@ springdoc:
     display-request-duration: true
     persist-authorization: true
 
-# 로그(선호도에 맞게 조정)
+# log
 logging:
   level:
+    # Hibernate SQL
     org.hibernate.SQL: off
     org.hibernate.orm.jdbc.bind: trace
     org.hibernate.type.descriptor.sql: trace
+
+    # Spring Web
     org.springframework.web: trace
     org.springframework.web.filter.CommonsRequestLoggingFilter: DEBUG
+
   pattern:
     console: "%d{HH:mm:ss} %-5level %logger{36} - %msg%n"
 
-# 외부 API 설정
+# API-KEY
 findex:
   api:
-    service-key: ${FINDEX_API_KEY}    # 👉 반드시 '인코딩 키'
+    url: 'https://apis.data.go.kr/1160100/service/GetMarketIndexInfoService'
+    key: ${FINDEX_API_KEY}

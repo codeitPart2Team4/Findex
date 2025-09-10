@@ -1,12 +1,13 @@
 package com.codeit.findex.indexinfo.repository;
 
-import com.codeit.findex.indexinfo.enums.SortDirection;
 import com.codeit.findex.indexinfo.entity.IndexInfo;
-import org.springframework.data.domain.Page;
+import com.codeit.findex.indexinfo.enums.SortDirection;
+
+import java.util.List;
 
 public interface IndexInfoQueryRepository {
 
-    Page<IndexInfo> findAllByConditions(
+    List<IndexInfo> findAllByConditions(
             String indexClassification,
             String indexName,
             Boolean favorite,
@@ -15,4 +16,6 @@ public interface IndexInfoQueryRepository {
             SortDirection sortDirection,
             int size
     );
+
+    long countByConditions(String indexClassification, String indexName, Boolean favorite);
 }
