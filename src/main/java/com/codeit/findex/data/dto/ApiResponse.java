@@ -1,4 +1,4 @@
-package com.codeit.findex.data;
+package com.codeit.findex.data.dto;
 
 
 import lombok.AllArgsConstructor;

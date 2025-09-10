@@ -1,6 +1,7 @@
 package com.codeit.findex.indexdata.repository;
 
 import com.codeit.findex.indexdata.entity.IndexData;
+import com.codeit.findex.indexinfo.entity.IndexInfo;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDate;
@@ -17,4 +18,6 @@ public interface IndexDataRepository
 
   Optional<IndexData> findTop1ByIndexInfo_IdAndBaseDateLessThanEqualOrderByBaseDateDesc(
       Long indexInfoId, LocalDate baseDate);
+
+    Optional<IndexData> findByIndexInfoAndBaseDate(IndexInfo indexInfo, LocalDate basDt);
 }
