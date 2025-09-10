@@ -1,6 +1,16 @@
 package com.codeit.findex.data;
 
+import com.codeit.findex.common.enums.SourceType;
+import com.codeit.findex.data.dto.Body;
+import com.codeit.findex.data.dto.Item;
+import com.codeit.findex.indexdata.entity.IndexData;
+import com.codeit.findex.indexdata.repository.IndexDataRepository;
+import com.codeit.findex.indexinfo.entity.IndexInfo;
+import com.codeit.findex.indexinfo.repository.IndexInfoRepository;
+import com.codeit.findex.syncjob.entity.SyncJob;
+import com.codeit.findex.syncjob.repository.SyncJobRepository;
 import jakarta.annotation.PostConstruct;
+import jakarta.transaction.Transactional;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,6 +20,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
+import java.math.BigDecimal;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -23,8 +34,16 @@ public class ApiFetchService {
     @Value("${findex.api.url}")
     private String apiUrl;
 
-    private int count = 1;
     private final int MAX_RETRY = 3;
+
+    @Autowired
+    private IndexInfoRepository indexInfoRepository;
+
+    @Autowired
+    private IndexDataRepository indexDataRepository;
+
+    @Autowired
+    private SyncJobRepository syncJobRepository;
 
     @PostConstruct
     public void init() throws Exception {
@@ -141,20 +160,86 @@ public class ApiFetchService {
         return true;
     }
 
-    private void processItems(int pageNo, List<Item> items) {
+    @Transactional
+    protected void processItems(int pageNo, List<Item> items) {
         for (Item item : items) {
-            System.out.println("---- Item ----");
-            System.out.println("pageNo: " + pageNo + ", count : "+ count +  ", Index Name: " + item.getIdxNm());
-            System.out.println("Base Date: " + item.getBasDt());
-            System.out.println("Closing Price: " + item.getClpr());
-            System.out.println("Opening Price: " + item.getMkp());
-            System.out.println("High Price: " + item.getHipr());
-            System.out.println("Low Price: " + item.getLopr());
-            System.out.println("Volume: " + item.getTrqu());
-            System.out.println("Trading Amount: " + item.getTrPrc());
-            System.out.println("--------------------");
-            count++;
+            IndexInfo indexInfo = null;
+            try {
+                indexInfo = indexInfoRepository.findByIndexName(item.getIdxNm())
+                        .orElseGet(() -> {
+                            IndexInfo newInfo = new IndexInfo();
+                            newInfo.setIndexClassification(item.getIdxCsf());
+                            newInfo.setIndexName(item.getIdxNm());
+                            newInfo.setSourceType(SourceType.OPEN_API);
+                            newInfo.setBasePointInTime(item.getBasPntm());
+                            newInfo.setBaseIndex(BigDecimal.valueOf(item.getBasIdx()));
+
+                            return newInfo;
+                        });
+                indexInfo.setEmployedItemsCount(item.getEpyItmsCnt());
+
+                indexInfo = indexInfoRepository.save(indexInfo);
+
+                IndexInfo finalIndexInfo = indexInfo;
+                IndexData indexData = indexDataRepository.findByIndexInfoAndBaseDate(indexInfo, item.getBasDt())
+                        .orElseGet(() -> {
+//                            IndexData newData = toIndexData(item, finalIndexInfo, new IndexData());
+                            IndexData newData = new IndexData();
+                            newData.setIndexInfo(finalIndexInfo);
+                            newData.setSourceType(SourceType.OPEN_API);
+
+                            return newData;
+                        });
+
+                indexData.setBaseDate(item.getBasDt());
+                indexData.setMarketPrice(item.getMkp());
+                indexData.setClosingPrice(item.getClpr());
+                indexData.setHighPrice(item.getHipr());
+                indexData.setLowPrice(item.getLopr());
+                indexData.setVersus(item.getVs());
+                indexData.setFluctuationRate(item.getFltRt());
+                indexData.setTradingQuantity(item.getTrqu());
+                indexData.setTradingPrice(item.getTrPrc());
+                indexData.setMarketTotalAmount(item.getLstgMrktTotAmt());
+
+
+                indexDataRepository.save(indexData);
+
+                    SyncJob syncInfoJob = syncJobRepository.findByIndexInfoAndJobType(indexInfo, "INDEX_INFO")
+                            .orElseGet(() -> {
+                                SyncJob newJob = new SyncJob();
+                                newJob.setIndexInfo(finalIndexInfo);
+                                newJob.setJobType("INDEX_INFO");
+                                newJob.setWorker("system");
+                                newJob.setResult("SUCCESS");
+
+                                return newJob;
+                            });
+                syncInfoJob.setTargetDate(item.getBasDt());
+                syncInfoJob = syncJobRepository.save(syncInfoJob);
+
+                SyncJob syncDataJob = new SyncJob();
+                syncDataJob.setIndexInfo(indexInfo);
+                syncDataJob.setJobType("INDEX_DATA");
+                syncDataJob.setTargetDate(item.getBasDt());
+                syncDataJob.setWorker("system");
+                syncDataJob.setResult("SUCCESS");
+                syncJobRepository.save(syncDataJob);
+            } catch (Exception e) {
+                SyncJob failJob = new SyncJob();
+                failJob.setIndexInfo(indexInfo);
+                failJob.setJobType("INDEX_DATA");
+                failJob.setTargetDate(item.getBasDt());
+                failJob.setWorker("system");
+                failJob.setResult("FAIL");
+                syncJobRepository.save(failJob);
+
+                throw new RuntimeException(e);
+            }
+
         }
     }
+
+
 }
 

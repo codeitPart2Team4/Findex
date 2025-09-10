@@ -1,5 +1,7 @@
 package com.codeit.findex.data;
 
+import com.codeit.findex.data.dto.Body;
+import com.codeit.findex.data.dto.Item;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
@@ -61,7 +63,7 @@ public class FindexApiParser {
 
     private Item parseItem(JSONObject obj) {
         Double lsYrEdVsFltRt = getDoubleData(obj, "lsYrEdVsFltRt");
-        String basPntm = getStrData(obj, "basPntm");
+        LocalDate basPntm = getLocalDateData(obj, "basPntm");
         Double basIdx = getDoubleData(obj, "basIdx");
         LocalDate basDt = getLocalDateData(obj, "basDt");
         String idxCsf = getStrData(obj, "idxCsf");
@@ -78,9 +80,9 @@ public class FindexApiParser {
         Long lstgMrktTotAmt = getLongData(obj, "lstgMrktTotAmt");
         Integer lsYrEdVsFltRg = getIntData(obj, "lsYrEdVsFltRg");
         Double yrWRcrdHgst = getDoubleData(obj, "yrWRcrdHgst");
-        String yrWRcrdHgstDt = getStrData(obj, "yrWRcrdHgstDt");
+        LocalDate yrWRcrdHgstDt = getLocalDateData(obj, "yrWRcrdHgstDt");
         Integer yrWRcrdLwst = getIntData(obj, "yrWRcrdLwst");
-        String yrWRcrdLwstDt = getStrData(obj, "yrWRcrdLwstDt");
+        LocalDate yrWRcrdLwstDt = getLocalDateData(obj, "yrWRcrdLwstDt");
 
         Item item = new Item(
                 lsYrEdVsFltRt, basPntm, basIdx, basDt, idxCsf, idxNm, epyItmsCnt, clpr, vs, fltRt,
