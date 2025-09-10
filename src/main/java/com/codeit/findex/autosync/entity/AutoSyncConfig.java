@@ -3,7 +3,6 @@ package com.codeit.findex.autosync.entity;
 import com.codeit.findex.common.entity.BaseEntity;
 import com.codeit.findex.indexinfo.entity.IndexInfo;
 import jakarta.persistence.*;
-import jakarta.transaction.Transactional;
 import lombok.*;
 
 @Entity

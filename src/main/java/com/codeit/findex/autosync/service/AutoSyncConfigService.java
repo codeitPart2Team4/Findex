@@ -5,18 +5,13 @@ import com.codeit.findex.autosync.dto.CursorPageResponse;
 import com.codeit.findex.autosync.entity.AutoSyncConfig;
 import com.codeit.findex.autosync.mapper.AutoSyncMapper;
 import com.codeit.findex.autosync.repository.AutoSyncConfigRepository;
-import com.codeit.findex.indexinfo.entity.IndexInfo;
-import com.codeit.findex.indexinfo.repository.IndexInfoRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional
