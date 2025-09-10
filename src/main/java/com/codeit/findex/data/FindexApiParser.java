@@ -19,12 +19,11 @@ public class FindexApiParser {
         JSONObject response = jsonObject.getJSONObject("response");
         JSONObject body = response.getJSONObject("body");
 
-        Integer numOfRows = body.getInt("numOfRows");
-        Integer pageNo = body.getInt("pageNo");
-        Integer totalCount = body.getInt("totalCount");
+        int numOfRows = body.getInt("numOfRows");
+        int pageNo = body.getInt("pageNo");
+        int totalCount = body.getInt("totalCount");
 
-        Body bodyObj = new Body(numOfRows, pageNo, totalCount, null);
-        return bodyObj;
+        return new Body(numOfRows, pageNo, totalCount, null);
     }
 
     public List<Item> parseItems(String jsonString) {
