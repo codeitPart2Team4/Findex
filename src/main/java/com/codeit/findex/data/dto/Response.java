@@ -1,4 +1,4 @@
-package com.codeit.findex.data;
+package com.codeit.findex.data.dto;
 
 
 import lombok.AllArgsConstructor;
@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
-public class Header {
-    private String resultCode;
-    private String resultMsg;
+public class Response {
+    private Header header;
+    private Body body;
 }

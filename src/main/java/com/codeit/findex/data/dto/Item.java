@@ -1,6 +1,5 @@
-package com.codeit.findex.data;
+package com.codeit.findex.data.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -13,7 +12,7 @@ import java.time.LocalDate;
 public class Item {
     private Double lsYrEdVsFltRt;    // 지수의 전년말 대비 등락율
 
-    private String basPntm;          // 지수를 산출하기 위한 기준 시점
+    private LocalDate basPntm;          // 지수를 산출하기 위한 기준 시점
     private Double basIdx;           // 기준 시점의 지수값
 
     private LocalDate basDt;            // 기준일자
@@ -31,7 +30,7 @@ public class Item {
     private Long lstgMrktTotAmt;     // 지수에 포함된 종목의 시가총액
     private Integer lsYrEdVsFltRg;       // 지수의 전년말 대비 등락폭
     private Double yrWRcrdHgst;      // 지수의 연중 최고치
-    private String yrWRcrdHgstDt;    // 지수가 연중 최고치를 기록한 날짜
+    private LocalDate yrWRcrdHgstDt;    // 지수가 연중 최고치를 기록한 날짜
     private Integer yrWRcrdLwst;         // 지수의 연중 최저치
-    private String yrWRcrdLwstDt;    // 지수가 연중 최저치를 기록한 날짜
+    private LocalDate yrWRcrdLwstDt;    // 지수가 연중 최저치를 기록한 날짜
 }

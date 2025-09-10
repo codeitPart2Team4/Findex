@@ -1,10 +1,8 @@
-package com.codeit.findex.data;
+package com.codeit.findex.data.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor

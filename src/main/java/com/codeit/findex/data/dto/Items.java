@@ -1,14 +1,14 @@
-package com.codeit.findex.data;
-
+package com.codeit.findex.data.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
-public class Response {
-    private Header header;
-    private Body body;
+public class Items {
+    private List<Item> item;
 }
