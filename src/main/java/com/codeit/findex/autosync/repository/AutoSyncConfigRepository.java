@@ -1,4 +1,12 @@
 package com.codeit.findex.autosync.repository;
 
-public class AutoSyncConfigRepository {
+import com.codeit.findex.autosync.entity.AutoSyncConfig;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.Optional;
+
+public interface AutoSyncConfigRepository extends JpaRepository<AutoSyncConfig, Long>, AutoSyncConfigQueryRepository {
+
+    Optional<AutoSyncConfig> findByIndexInfoId(Long indexInfoId);
+
 }

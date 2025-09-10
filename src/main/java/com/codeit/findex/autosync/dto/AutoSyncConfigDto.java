@@ -1,4 +1,9 @@
 package com.codeit.findex.autosync.dto;
 
-public class AutoSyncConfigDto {
-}
+public record AutoSyncConfigDto(
+        Long id,
+        Long indexInfoId,
+        String indexClassification,
+        String indexName,
+        Boolean enabled
+) {}

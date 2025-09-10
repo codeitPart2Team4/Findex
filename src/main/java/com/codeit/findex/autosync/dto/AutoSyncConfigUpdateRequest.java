@@ -1,4 +1,7 @@
 package com.codeit.findex.autosync.dto;
 
-public class AutoSyncConfigUpdateRequest {
-}
+import lombok.Data;
+
+public record AutoSyncConfigUpdateRequest(
+        boolean enabled
+) {}

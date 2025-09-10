@@ -1,5 +1,7 @@
 package com.codeit.findex.indexinfo.service;
 
+import com.codeit.findex.autosync.entity.AutoSyncConfig;
+import com.codeit.findex.autosync.repository.AutoSyncConfigRepository;
 import com.codeit.findex.common.dto.PageResponse;
 import com.codeit.findex.common.enums.SourceType;
 import com.codeit.findex.indexinfo.dto.IndexInfoCreateRequest;
@@ -26,6 +28,8 @@ public class IndexInfoService {
 
     private final IndexInfoMapper indexInfoMapper;
 
+    private final AutoSyncConfigRepository autoSyncConfigRepository;  // 기본 auto-sync 비활성화상태 설정을 위한 추가
+
     public IndexInfoDto create(IndexInfoCreateRequest request) {
 
         if (indexInfoRepository.existsByIndexClassificationAndIndexName(
@@ -45,6 +49,15 @@ public class IndexInfoService {
                 SourceType.USER,
                 request.favorite()
         );
+
+        // 신규 생성시 자동 연동 설정도 비활성화 상태로 생성
+        autoSyncConfigRepository.save(
+                AutoSyncConfig.builder()
+                        .indexInfo(indexInfo)
+                        .enabled(false)
+                        .build()
+        );
+
 
         return indexInfoMapper.toDto(indexInfoRepository.save(indexInfo));
     }
