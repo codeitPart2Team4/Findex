@@ -1,4 +1,6 @@
-drop table index_info;
+drop table index_info cascade ;
+drop table index_data cascade ;
+drop table sync_job  cascade ;
 
 -- ===============================
 -- Table: IndexInfo (지수 정보)
@@ -92,3 +94,127 @@ VALUES
     ('테마지수', 'KRX 여행', 10, '2025-09-08', 720.90, 'OPEN_API', false, false);
 
 select count(*) from index_info;
+
+CREATE TABLE IF NOT EXISTS index_info (
+                                          id BIGSERIAL PRIMARY KEY,
+                                          index_classification VARCHAR(100) NOT NULL,        -- 예: KOSPI시리즈 / KRX시리즈 / KOSDAQ시리즈 / 테마지수 / 주가지수 / 업종지수
+                                          index_name           VARCHAR(200) NOT NULL UNIQUE, -- 지수명(단독 유니크)
+                                          employed_items_count INT,
+                                          base_point_in_time   DATE,
+                                          base_index           DOUBLE PRECISION,
+                                          source_type          VARCHAR(20) NOT NULL,         -- 'USER' | 'OPEN_API'
+                                          favorite             BOOLEAN NOT NULL DEFAULT FALSE,
+                                          auto_sync_enabled    BOOLEAN NOT NULL DEFAULT FALSE,
+
+                                          CONSTRAINT chk_index_info_source_type
+                                              CHECK (source_type IN ('USER','OPEN_API')),
+
+    -- 드롭다운에서 쓰는 분류값들을 허용
+                                          CONSTRAINT chk_index_info_classification
+                                              CHECK (index_classification IN ('주가지수','업종지수','테마지수','KOSPI시리즈','KOSDAQ시리즈','KRX시리즈'))
+);
+
+-- 조회/검색 성능
+CREATE INDEX IF NOT EXISTS idx_index_info__class_name
+    ON index_info (index_classification, index_name);
+
+WITH idx AS (
+    SELECT id FROM index_info WHERE index_name = 'KRX300'
+)
+INSERT INTO index_data
+(index_info_id, base_date, source_type,
+ market_price, closing_price, high_price, low_price,
+ versus, fluctuation_rate, trading_quantity, trading_price, market_total_amount)
+SELECT
+    idx.id, DATE '2025-09-08', 'OPEN_API',
+    1218.33, 1220.33, 1224.33, 1216.33,
+    0.00, 0.00, 90000000, 4500000000000, 90000000000000
+FROM idx
+ON CONFLICT ON CONSTRAINT uk_index_info_base_date DO NOTHING;
+
+WITH d AS (
+    SELECT generate_series(DATE '2025-09-03', DATE '2025-09-09', INTERVAL '1 day')::date AS base_date
+),
+     g AS (
+         SELECT i.id AS index_info_id, i.base_index, d.base_date
+         FROM index_info i CROSS JOIN d
+     ),
+     p AS (
+         SELECT
+             index_info_id,
+             base_date,
+             'OPEN_API'::varchar AS source_type,
+             ROUND( (base_index * (1 + (random()-0.5)*0.015))::numeric, 2 ) AS closing_price,
+             ROUND( (base_index * (1 + (random()-0.5)*0.015))::numeric, 2 ) AS market_price
+         FROM g
+     ),
+     calc AS (
+         SELECT
+             index_info_id,
+             base_date,
+             source_type,
+             market_price,
+             closing_price,
+             GREATEST(market_price, closing_price) + ROUND( (random()*5)::numeric, 2 ) AS high_price,
+             LEAST(market_price,  closing_price)  - ROUND( (random()*5)::numeric, 2 ) AS low_price,
+             LAG(closing_price) OVER (PARTITION BY index_info_id ORDER BY base_date) AS prev_close
+         FROM p
+     ),
+     final AS (
+         SELECT
+             index_info_id,
+             base_date,
+             source_type,
+             market_price,
+             closing_price,
+             high_price,
+             low_price,
+             ROUND(COALESCE(closing_price - prev_close, 0)::numeric, 2) AS versus,
+             ROUND(
+                     CASE WHEN prev_close IS NULL OR prev_close = 0 THEN 0
+                          ELSE ((closing_price - prev_close) / prev_close * 100)::numeric
+                         END, 2
+             ) AS fluctuation_rate,
+             (50000000 + floor(random()*120000000))::bigint AS trading_quantity,
+             (6000000000000 + floor(random()*3000000000000))::bigint AS trading_price,
+             (70000000000000 + floor(random()*40000000000000))::bigint AS market_total_amount
+         FROM calc
+     )
+INSERT INTO index_data
+(index_info_id, base_date, source_type,
+ market_price, closing_price, high_price, low_price,
+ versus, fluctuation_rate, trading_quantity, trading_price, market_total_amount)
+SELECT * FROM final
+ON CONFLICT ON CONSTRAINT uk_index_info_base_date DO UPDATE
+    SET market_price        = EXCLUDED.market_price,
+        closing_price       = EXCLUDED.closing_price,
+        high_price          = EXCLUDED.high_price,
+        low_price           = EXCLUDED.low_price,
+        versus              = EXCLUDED.versus,
+        fluctuation_rate    = EXCLUDED.fluctuation_rate,
+        trading_quantity    = EXCLUDED.trading_quantity,
+        trading_price       = EXCLUDED.trading_price,
+        market_total_amount = EXCLUDED.market_total_amount;
+
+-- 전체 건수
+SELECT COUNT(*) FROM index_data;
+
+-- KRX300 최근 10일
+SELECT i.index_name, d.base_date, d.closing_price
+FROM index_data d
+         JOIN index_info i ON i.id = d.index_info_id
+WHERE i.index_name = 'KRX300'
+ORDER BY d.base_date DESC
+LIMIT 10;
+
+SELECT i.index_name, COUNT(*) cnt, MIN(d.base_date) min_dt, MAX(d.base_date) max_dt
+FROM index_data d
+         JOIN index_info i ON i.id = d.index_info_id
+WHERE i.index_name = 'KRX300'
+GROUP BY i.index_name;
+
+ALTER TABLE index_data
+    ADD CONSTRAINT uk_index_info_base_date UNIQUE (index_info_id, base_date);
+
+CREATE INDEX IF NOT EXISTS idx_index_data__ix_date
+    ON index_data (index_info_id, base_date DESC);

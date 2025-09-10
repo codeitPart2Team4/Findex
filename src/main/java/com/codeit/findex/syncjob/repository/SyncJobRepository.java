@@ -1,4 +1,3 @@
 package com.codeit.findex.syncjob.repository;
 
-public class SyncJobRepository {
-}
+public interface SyncJobRepository {}
