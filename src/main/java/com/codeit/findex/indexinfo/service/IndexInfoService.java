@@ -2,6 +2,7 @@ package com.codeit.findex.indexinfo.service;
 
 import com.codeit.findex.common.dto.PageResponse;
 import com.codeit.findex.common.enums.SourceType;
+import com.codeit.findex.common.error.exception.IndexInfoException;
 import com.codeit.findex.indexinfo.dto.IndexInfoCreateRequest;
 import com.codeit.findex.indexinfo.dto.IndexInfoDto;
 import com.codeit.findex.indexinfo.dto.IndexInfoSummaryDto;
@@ -15,7 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.NoSuchElementException;
+
+import static com.codeit.findex.common.error.errorcode.IndexInfoErrorCode.*;
 
 @Service
 @Transactional
@@ -27,13 +29,11 @@ public class IndexInfoService {
     private final IndexInfoMapper indexInfoMapper;
 
     public IndexInfoDto create(IndexInfoCreateRequest request) {
-
         if (indexInfoRepository.existsByIndexClassificationAndIndexName(
                 request.indexClassification(),
                 request.indexName())
         ) {
-            // 후에 개별 에러로 바꿔야함 - Duplicated
-            throw new IllegalStateException();
+            throw new IndexInfoException(INDEX_INFO_DUPLICATED);
         }
 
         IndexInfo indexInfo = new IndexInfo(
@@ -52,7 +52,7 @@ public class IndexInfoService {
     public IndexInfoDto findById(Long indexInfoId) {
         return indexInfoMapper.toDto(indexInfoRepository
                 .findById(indexInfoId)
-                .orElseThrow(NoSuchElementException::new));
+                .orElseThrow(() -> new IndexInfoException(INDEX_INFO_NOTFOUND)));
     }
 
     public PageResponse<IndexInfoDto> getIndexInfos(
@@ -128,7 +128,7 @@ public class IndexInfoService {
 
     public IndexInfoDto update(Long indexInfoId, IndexInfoUpdateRequest request) {
         IndexInfo indexInfo = indexInfoRepository.findById(indexInfoId)
-                .orElseThrow(NoSuchElementException::new); // 후에 개별 에러로 바꿔야함 - NotFound
+                .orElseThrow(() -> new IndexInfoException(INDEX_INFO_NOTFOUND));
 
         if (request.employedItemsCount() != null) {
             indexInfo.changeEmployedItemsCount(request.employedItemsCount());
@@ -150,8 +150,10 @@ public class IndexInfoService {
     }
 
     public void delete(Long id) {
+        // IndexInfo -> IndexData CascadeType 설정
+        // IndexInfo.java 참고
         indexInfoRepository.findById(id)
-                .orElseThrow(NoSuchElementException::new); // 후에 개별 에러로 바꿔야함 - NotFound
+                .orElseThrow(() -> new IndexInfoException(INDEX_INFO_NOTFOUND));
 
         indexInfoRepository.deleteById(id);
     }
