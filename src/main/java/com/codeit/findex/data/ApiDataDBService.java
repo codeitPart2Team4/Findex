@@ -1,7 +1,5 @@
 package com.codeit.findex.data;
 
-import com.codeit.findex.autosync.entity.AutoSyncConfig;
-import com.codeit.findex.autosync.repository.AutoSyncConfigRepository;
 import com.codeit.findex.common.enums.SourceType;
 import com.codeit.findex.data.dto.Body;
 import com.codeit.findex.data.dto.Item;
@@ -11,7 +9,6 @@ import com.codeit.findex.indexinfo.entity.IndexInfo;
 import com.codeit.findex.indexinfo.repository.IndexInfoRepository;
 import com.codeit.findex.syncjob.entity.SyncJob;
 import com.codeit.findex.syncjob.repository.SyncJobRepository;
-import jakarta.annotation.PostConstruct;
 import jakarta.transaction.Transactional;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,13 +22,11 @@ import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDate;
 import java.util.*;
 
 @Component
-public class ApiAutoSyncService {
+public class ApiDataDBService {
     @Value("${findex.api.key}")
     private String apiKey;
 
@@ -49,76 +44,50 @@ public class ApiAutoSyncService {
     @Autowired
     private SyncJobRepository syncJobRepository;
 
-    @Autowired
-    private AutoSyncConfigRepository autoSyncConfigRepository;
+//    @PostConstruct
+//    public void init() throws Exception {
+//        System.out.println("fetchAndProcessAll 시작");
+//        fetchAndProcessAll();
+//    }
 
+    private final IndexApiParser indexApiParser = new IndexApiParser();
 
-    private final FindexApiParser findexApiParser = new FindexApiParser();
-
-    @Transactional
-    public void fetchAndProcessAll() throws Exception {
+    public void fetchAndProcessAll() {
         int pageNo = 1;
         int pageSize = 1000;
         int totalPages = Integer.MAX_VALUE;
         int numOfRows = 1000;
 
-        List<AutoSyncConfig> enabledTrueList = autoSyncConfigRepository.findByEnabledTrue();
-
-        if (!enabledTrueList.isEmpty()) {
-            for(AutoSyncConfig autoSyncConfig : enabledTrueList){
-
-                IndexInfo trueIndexInfo = autoSyncConfig.getIndexInfo();
-
-                Optional<SyncJob> trueSyncJob = syncJobRepository.findByIndexInfoAndJobType(trueIndexInfo, "INDEX_INFO");
-
-                String beginBasDt = trueSyncJob.map(syncJob -> syncJob.getJobTime().toLocalDate().toString())
-                        .orElseGet(() -> trueIndexInfo.getBasePointInTime().toString());
-
-                System.out.println("자동 연동 업데이트: autoId - " + autoSyncConfig.getId() +
-                        ", 지수 - " + trueIndexInfo.getIndexName() +
-                        ", 지수 id - " + trueIndexInfo.getId() +
-                        ", 최근 연동 시간 - " + beginBasDt);
-                try {
-                    pageNo = 1;
-                    totalPages = Integer.MAX_VALUE;
-                    while (pageNo <= totalPages) {
-                        StringBuilder urlBuilder = buildUrl(pageNo, numOfRows, trueIndexInfo.getIndexName(), beginBasDt);
-                        System.out.println("요청 url :" +  urlBuilder.toString());
-                        String responseJson = callApiWithRetry(urlBuilder);
-                        System.out.println("API 호출 시도: page=" + pageNo);
-                        if(responseJson == null || responseJson.isEmpty()) {
-                            System.out.println("responseJson에 문제 발생.");
-                            break;
-                        }
-                        System.out.println("API 호출 성공, 응답 길이: " + responseJson.length());
-
-                        Body body = findexApiParser.parseBody(responseJson);
-                        System.out.println("총 데이터 수: " + body.getTotalCount());
-
-                        if (pageNo == 1) {
-                            totalPages = (int) Math.ceil(body.getTotalCount() / (double) pageSize);
-                        }
-
-                        List<Item> items = findexApiParser.parseItems(responseJson);
-
-                        System.out.println("processItems 호출 - 아이템 수: " + items.size());
-                        processItems(items);
-
-                        pageNo++;
-
-                    }
-                } catch (Exception e) {
-                    System.err.println("동기화 실패: " + autoSyncConfig.getIndexInfo().getIndexName());
-                    e.printStackTrace();
-                    continue;
+        while (pageNo <= totalPages) {
+            try {
+                StringBuilder urlBuilder = buildUrl(pageNo, numOfRows);
+                System.out.println("요청 url :" +  urlBuilder.toString());
+                String responseJson = callApiWithRetry(urlBuilder);
+                System.out.println("API 호출 시도: page=" + pageNo);
+                if(responseJson == null || responseJson.isEmpty()) {
+                    System.out.println("responseJson에 문제 발생.");
+                    break;
                 }
-                System.out.println("자동 연동 업데이트 완료: autoId - " + autoSyncConfig.getId() +
-                        ", 지수 - " + trueIndexInfo.getIndexName() +
-                        ", 지수 id - " + trueIndexInfo.getId() +
-                        ", 최근 연동 시간 - " + beginBasDt);
-            }
-        }
+                System.out.println("API 호출 성공, 응답 길이: " + responseJson.length());
 
+                Body body = indexApiParser.parseBody(responseJson);
+                System.out.println("총 데이터 수: " + body.getTotalCount());
+
+                if (pageNo == 1) {
+                    totalPages = (int) Math.ceil(body.getTotalCount() / (double) pageSize);
+                }
+
+                List<Item> items = indexApiParser.parseItems(responseJson);
+
+                System.out.println("processItems 호출 - 아이템 수: " + items.size());
+                storeItemsToDb(items);
+
+                pageNo++;
+            } catch (Exception e) {
+                System.err.println("동기화 실패: ");
+            }
+
+        }
     }
 
     private String callApiWithRetry(StringBuilder urlBuilder) throws InterruptedException {
@@ -146,13 +115,11 @@ public class ApiAutoSyncService {
         return null;
     }
 
-    private StringBuilder buildUrl(int pageNo, int numOfRows, String idxNm, String beginBasDt) throws UnsupportedEncodingException {
+    private StringBuilder buildUrl(int pageNo, int numOfRows) throws UnsupportedEncodingException {
         StringBuilder urlBuilder = new StringBuilder(apiUrl);
         urlBuilder.append("?serviceKey=").append(apiKey);
         urlBuilder.append("&pageNo=").append(pageNo);
         urlBuilder.append("&numOfRows=").append(numOfRows);
-        urlBuilder.append("&beginBasDt=").append(beginBasDt);
-        urlBuilder.append("&idxNm=").append(URLEncoder.encode(idxNm, "UTF-8"));
         urlBuilder.append("&resultType=json");
 
         return urlBuilder;
@@ -198,7 +165,7 @@ public class ApiAutoSyncService {
     }
 
     @Transactional
-    protected void processItems(List<Item> items) {
+    protected void storeItemsToDb(List<Item> items) {
         Set<SyncJob> syncJobsList = new HashSet<>();
         Set<IndexData> indexDataList = new HashSet<>();
 
@@ -239,17 +206,18 @@ public class ApiAutoSyncService {
                 indexData.setTradingPrice(item.getTrPrc());
                 indexData.setMarketTotalAmount(item.getLstgMrktTotAmt());
 
+
                 indexDataList.add(indexData);
 
                 SyncJob syncInfoJob = syncJobRepository.findByIndexInfoAndJobType(indexInfo, "INDEX_INFO")
-                    .orElseGet(() -> {
-                        SyncJob newJob = new SyncJob();
-                        newJob.setJobType("INDEX_INFO");
-                        newJob.setWorker("system");
-                        newJob.setResult("SUCCESS");
+                .orElseGet(() -> {
+                    SyncJob newJob = new SyncJob();
+                    newJob.setJobType("INDEX_INFO");
+                    newJob.setWorker("system");
+                    newJob.setResult("SUCCESS");
 
-                        return newJob;
-                    });
+                    return newJob;
+                });
                 syncInfoJob.setIndexInfo(indexInfo);
                 syncInfoJob.setTargetDate(item.getBasDt());
                 syncJobsList.add(syncInfoJob);

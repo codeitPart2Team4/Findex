@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Component
-public class FindexApiParser {
+public class IndexApiParser {
 
     public Body parseBody(String jsonString) {
         JSONObject jsonObject = new JSONObject(jsonString);
