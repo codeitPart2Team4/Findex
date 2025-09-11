@@ -2,9 +2,9 @@ spring:
   application:
     name: Findex
   datasource:
-    url: jdbc:postgresql://localhost:5432/findex
-    username: postgres
-    password: 1234
+    url: jdbc:postgresql://localhost:5432/
+    username:
+    password:
     driver-class-name: org.postgresql.Driver
   servlet:
     multipart:
