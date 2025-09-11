@@ -24,7 +24,7 @@ import java.math.BigDecimal;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
+import java.util.*;
 
 @Component
 public class ApiFetchService {
@@ -45,43 +45,48 @@ public class ApiFetchService {
     @Autowired
     private SyncJobRepository syncJobRepository;
 
-    @PostConstruct
-    public void init() throws Exception {
-        System.out.println("fetchAndProcessAll 시작");
-        fetchAndProcessAll();
-    }
+//    @PostConstruct
+//    public void init() throws Exception {
+//        System.out.println("fetchAndProcessAll 시작");
+//        fetchAndProcessAll();
+//    }
 
     private final FindexApiParser findexApiParser = new FindexApiParser();
 
-    public void fetchAndProcessAll() throws Exception {
+    public void fetchAndProcessAll() {
         int pageNo = 1;
         int pageSize = 1000;
         int totalPages = Integer.MAX_VALUE;
         int numOfRows = 1000;
 
         while (pageNo <= totalPages) {
-            StringBuilder urlBuilder = buildUrl(pageNo, numOfRows);
-            String responseJson = callApiWithRetry(urlBuilder);
-            System.out.println("API 호출 시도: page=" + pageNo);
-            if(responseJson == null || responseJson.isEmpty()) {
-                System.out.println("responseJson에 문제 발생.");
-                break;
+            try {
+                StringBuilder urlBuilder = buildUrl(pageNo, numOfRows);
+                System.out.println("요청 url :" +  urlBuilder.toString());
+                String responseJson = callApiWithRetry(urlBuilder);
+                System.out.println("API 호출 시도: page=" + pageNo);
+                if(responseJson == null || responseJson.isEmpty()) {
+                    System.out.println("responseJson에 문제 발생.");
+                    break;
+                }
+                System.out.println("API 호출 성공, 응답 길이: " + responseJson.length());
+
+                Body body = findexApiParser.parseBody(responseJson);
+                System.out.println("총 데이터 수: " + body.getTotalCount());
+
+                if (pageNo == 1) {
+                    totalPages = (int) Math.ceil(body.getTotalCount() / (double) pageSize);
+                }
+
+                List<Item> items = findexApiParser.parseItems(responseJson);
+
+                System.out.println("processItems 호출 - 아이템 수: " + items.size());
+                processItems(items);
+
+                pageNo++;
+            } catch (Exception e) {
+                System.err.println("동기화 실패: ");
             }
-            System.out.println("API 호출 성공, 응답 길이: " + responseJson.length());
-
-            Body body = findexApiParser.parseBody(responseJson);
-            System.out.println("총 데이터 수: " + body.getTotalCount());
-
-            if (pageNo == 1) {
-                totalPages = (int) Math.ceil(body.getTotalCount() / (double) pageSize);
-            }
-
-            List<Item> items = findexApiParser.parseItems(responseJson);
-
-            System.out.println("processItems 호출 - 아이템 수: " + items.size());
-            processItems(pageNo, items);
-
-            pageNo++;
 
         }
     }
@@ -161,7 +166,10 @@ public class ApiFetchService {
     }
 
     @Transactional
-    protected void processItems(int pageNo, List<Item> items) {
+    protected void processItems(List<Item> items) {
+        Set<SyncJob> syncJobsList = new HashSet<>();
+        Set<IndexData> indexDataList = new HashSet<>();
+
         for (Item item : items) {
             IndexInfo indexInfo = null;
             try {
@@ -180,17 +188,14 @@ public class ApiFetchService {
 
                 indexInfo = indexInfoRepository.save(indexInfo);
 
-                IndexInfo finalIndexInfo = indexInfo;
                 IndexData indexData = indexDataRepository.findByIndexInfoAndBaseDate(indexInfo, item.getBasDt())
                         .orElseGet(() -> {
-//                            IndexData newData = toIndexData(item, finalIndexInfo, new IndexData());
                             IndexData newData = new IndexData();
-                            newData.setIndexInfo(finalIndexInfo);
                             newData.setSourceType(SourceType.OPEN_API);
 
                             return newData;
                         });
-
+                indexData.setIndexInfo(indexInfo);
                 indexData.setBaseDate(item.getBasDt());
                 indexData.setMarketPrice(item.getMkp());
                 indexData.setClosingPrice(item.getClpr());
@@ -203,41 +208,47 @@ public class ApiFetchService {
                 indexData.setMarketTotalAmount(item.getLstgMrktTotAmt());
 
 
-                indexDataRepository.save(indexData);
+                indexDataList.add(indexData);
 
-                    SyncJob syncInfoJob = syncJobRepository.findByIndexInfoAndJobType(indexInfo, "INDEX_INFO")
-                            .orElseGet(() -> {
-                                SyncJob newJob = new SyncJob();
-                                newJob.setIndexInfo(finalIndexInfo);
-                                newJob.setJobType("INDEX_INFO");
-                                newJob.setWorker("system");
-                                newJob.setResult("SUCCESS");
+                SyncJob syncInfoJob = syncJobRepository.findByIndexInfoAndJobType(indexInfo, "INDEX_INFO")
+                .orElseGet(() -> {
+                    SyncJob newJob = new SyncJob();
+                    newJob.setJobType("INDEX_INFO");
+                    newJob.setWorker("system");
+                    newJob.setResult("SUCCESS");
 
-                                return newJob;
-                            });
+                    return newJob;
+                });
+                syncInfoJob.setIndexInfo(indexInfo);
                 syncInfoJob.setTargetDate(item.getBasDt());
-                syncInfoJob = syncJobRepository.save(syncInfoJob);
+                syncJobsList.add(syncInfoJob);
 
-                SyncJob syncDataJob = new SyncJob();
+                SyncJob syncDataJob = syncJobRepository.findByIndexInfoAndJobTypeAndTargetDate(indexInfo, "INDEX_DATA", item.getBasDt())
+                        .orElseGet(() -> {
+                            SyncJob newJob = new SyncJob();
+                            newJob.setJobType("INDEX_DATA");
+                            newJob.setWorker("system");
+                            newJob.setResult("SUCCESS");
+
+                            return newJob;
+                        });
                 syncDataJob.setIndexInfo(indexInfo);
-                syncDataJob.setJobType("INDEX_DATA");
                 syncDataJob.setTargetDate(item.getBasDt());
-                syncDataJob.setWorker("system");
-                syncDataJob.setResult("SUCCESS");
-                syncJobRepository.save(syncDataJob);
+                syncJobsList.add(syncDataJob);
             } catch (Exception e) {
-                SyncJob failJob = new SyncJob();
-                failJob.setIndexInfo(indexInfo);
-                failJob.setJobType("INDEX_DATA");
-                failJob.setTargetDate(item.getBasDt());
-                failJob.setWorker("system");
-                failJob.setResult("FAIL");
-                syncJobRepository.save(failJob);
+                Optional<SyncJob> syncInfoFailJob = syncJobRepository.findByIndexInfoAndJobType(indexInfo, "INDEX_INFO");
+                syncInfoFailJob.ifPresent(syncJob -> {syncJob.setResult("FAIL");});
 
-                throw new RuntimeException(e);
+
+                Optional<SyncJob> syncDataFailJob = syncJobRepository.findByIndexInfoAndJobTypeAndTargetDate(indexInfo, "INDEX_DATA", item.getBasDt());
+                syncDataFailJob.ifPresent(syncJob -> {syncJob.setResult("FAIL");});
+
+                e.printStackTrace();
             }
-
         }
+
+        indexDataRepository.saveAll(indexDataList);
+        syncJobRepository.saveAll(syncJobsList);
     }
 
 
