@@ -12,6 +12,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @Table(name = "sync_job")
@@ -41,4 +42,16 @@ public class SyncJob extends BaseEntity {
 
     @Column(nullable = false, length = 20)
     private String result;
+
+    @Override
+    public boolean equals(Object object) {
+        if (object == null || getClass() != object.getClass()) return false;
+        SyncJob syncJob = (SyncJob) object;
+        return Objects.equals(indexInfo, syncJob.indexInfo) && Objects.equals(jobType, syncJob.jobType) && Objects.equals(targetDate, syncJob.targetDate);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(indexInfo, jobType, targetDate);
+    }
 }
