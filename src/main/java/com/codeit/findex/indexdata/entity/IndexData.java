@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.Objects;
 
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor @Builder
@@ -38,4 +39,19 @@ public class IndexData {
   private Long tradingQuantity;
   private Long tradingPrice;
   private Long marketTotalAmount;
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof IndexData)) return false;
+    IndexData that = (IndexData) o;
+    return Objects.equals(indexInfo.getId(), that.indexInfo.getId()) &&
+            Objects.equals(baseDate, that.baseDate);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(indexInfo.getId(), baseDate);
+  }
+
 }

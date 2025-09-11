@@ -3,8 +3,8 @@ spring:
     name: Findex
   datasource:
     url: jdbc:postgresql://localhost:5432/
-    username: postgres
-    password: 1234
+    username:
+    password:
     driver-class-name: org.postgresql.Driver
   servlet:
     multipart:
@@ -49,11 +49,12 @@ logging:
     org.springframework.web: trace
     org.springframework.web.filter.CommonsRequestLoggingFilter: DEBUG
 
+
   pattern:
     console: "%d{HH:mm:ss} %-5level %logger{36} - %msg%n"
 
 # API-KEY
 findex:
   api:
-    url: 'https://apis.data.go.kr/1160100/service/GetMarketIndexInfoService'
+    url: ${FINDEX_URL}
     key: ${FINDEX_API_KEY}

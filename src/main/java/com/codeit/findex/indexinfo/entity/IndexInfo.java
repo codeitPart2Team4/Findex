@@ -4,9 +4,7 @@ import com.codeit.findex.common.entity.BaseEntity;
 import com.codeit.findex.common.enums.SourceType;
 import com.codeit.findex.indexdata.entity.IndexData;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -15,8 +13,9 @@ import java.util.List;
 
 @Entity
 @Table(name = "index_info")
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Getter @Setter
+@AllArgsConstructor
+@NoArgsConstructor/*(access = AccessLevel.PROTECTED)*/
 public class IndexInfo extends BaseEntity {
 
     @Column(nullable = false, length = 100)
