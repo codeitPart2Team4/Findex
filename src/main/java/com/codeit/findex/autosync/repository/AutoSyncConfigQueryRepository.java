@@ -8,5 +8,4 @@ import java.util.List;
 public interface AutoSyncConfigQueryRepository {
 
     List<AutoSyncConfig> findByCursor(Long indexInfoId, Boolean enabled, Long idAfter, int size, Sort.Direction sortDirection);
-
 }
