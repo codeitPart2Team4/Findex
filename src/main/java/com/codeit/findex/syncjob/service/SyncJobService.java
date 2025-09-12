@@ -2,9 +2,7 @@ package com.codeit.findex.syncjob.service;
 
 import com.codeit.findex.common.dto.PageResponse;
 import com.codeit.findex.common.error.errorcode.IndexInfoErrorCode;
-import com.codeit.findex.common.error.errorcode.SyncJobErrorCode;
 import com.codeit.findex.common.error.exception.IndexInfoException;
-import com.codeit.findex.common.error.exception.SyncJobException;
 import com.codeit.findex.data.DataSyncRepository;
 import com.codeit.findex.data.IndexApiParser;
 import com.codeit.findex.data.dto.Body;
@@ -44,22 +42,13 @@ public class SyncJobService {
     private final SyncJobMapper syncJobMapper;
 
     public List<SyncJobDto> syncIndexInfo(String ip) {
-        int pageSize = 1000;
-        int numOfRows = 1000;
-
         List<IndexInfo> indexInfoList = indexInfoRepository.findAll();
-        List<SyncJobDto> syncJobDtoList = indexInfoList.parallelStream()
+        return indexInfoList.parallelStream()
                 .flatMap(indexInfo -> fetchAndStoreIndexInfo(indexInfo.getIndexName(), ip).stream())
                 .toList();
-
-
-        return syncJobDtoList;
     }
 
     public List<SyncJobDto> syncIndexData(IndexDataSyncRequest request, String ip) {
-        int pageSize = 1000;
-        int numOfRows = 1000;
-
         List<Long> indexIds = request.indexInfoIds();
 
         if (indexIds == null || indexIds.isEmpty()) {
@@ -77,24 +66,6 @@ public class SyncJobService {
                 })
                 .flatMap(Collection::stream)
                 .toList();
-
-//        List<SyncJobDto> syncJobDtoList = new ArrayList<>();
-//
-//
-//
-//        if (request.indexInfoIds().isEmpty()) {
-//            syncJobDtoList.addAll(fetchAndStoreIndexData(null, request.baseDateFrom(), request.baseDateTo(), numOfRows, pageSize, ip));
-//        } else {
-//            for(Long indexId : request.indexInfoIds()) {
-//                if (!indexInfoRepository.existsById(indexId)) {
-//                    throw new SyncJobException(SyncJobErrorCode.ASYNC_JOB_INVALID_REQUEST);
-//                }
-//                String indexName = indexInfoRepository.findById(indexId).get().getIndexName();
-//                syncJobDtoList.addAll(fetchAndStoreIndexData(indexName, request.baseDateFrom(), request.baseDateTo(), numOfRows, pageSize, ip));
-//            }
-//        }
-//
-//        return syncJobDtoList;
     }
 
     public PageResponse<SyncJobDto> getSyncJobs(

@@ -73,11 +73,7 @@ public class DataSyncRepository {
         urlBuilder.append("?serviceKey=").append(apiKey);
         urlBuilder.append("&pageNo=").append(pageNo);
         urlBuilder.append("&numOfRows=").append(numOfRows);
-        try {
-            urlBuilder.append("&idxNm=").append(URLEncoder.encode(indexName, "UTF-8"));
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
+        urlBuilder.append("&idxNm=").append(URLEncoder.encode(indexName, StandardCharsets.UTF_8));
         urlBuilder.append("&resultType=json");
 
         return urlBuilder;
@@ -89,11 +85,7 @@ public class DataSyncRepository {
         urlBuilder.append("?serviceKey=").append(apiKey);
         urlBuilder.append("&pageNo=").append(pageNo);
         urlBuilder.append("&numOfRows=").append(numOfRows);
-        try {
-            urlBuilder.append("&idxNm=").append(URLEncoder.encode(idxNm, "UTF-8"));
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
+        urlBuilder.append("&idxNm=").append(URLEncoder.encode(idxNm, StandardCharsets.UTF_8));
         urlBuilder.append("&beginBasDt=").append(baseDateFrom.toString());
         urlBuilder.append("&endBasDt=").append(baseDateTo.toString());
         urlBuilder.append("&resultType=json");
@@ -108,7 +100,7 @@ public class DataSyncRepository {
         urlBuilder.append("&pageNo=").append(pageNo);
         urlBuilder.append("&numOfRows=").append(numOfRows);
         urlBuilder.append("&beginBasDt=").append(beginBasDt);
-        urlBuilder.append("&idxNm=").append(URLEncoder.encode(idxNm, "UTF-8"));
+        urlBuilder.append("&idxNm=").append(URLEncoder.encode(idxNm, StandardCharsets.UTF_8));
         urlBuilder.append("&resultType=json");
 
         return urlBuilder;
@@ -121,7 +113,7 @@ public class DataSyncRepository {
         while (retryCount < MAX_RETRY) {
             String responseJson = callApi(urlBuilder);
 
-            if(responseJson != null && !responseJson.isEmpty()) {
+            if(!responseJson.isEmpty()) {
                 if(isValidResponse(responseJson)) {
                     return responseJson;
                 } else {

@@ -82,7 +82,7 @@ public class SyncJobQueryRepositoryImpl implements SyncJobQueryRepository {
     private void applyCursor(BooleanBuilder filters, String cursor, String sortBy, SortDirection sortDirection, QSyncJob syncJob) {
         if (cursor == null) return;
 
-        if (sortBy == null && sortBy.isBlank()) {
+        if (sortBy == null || sortBy.isBlank()) {
             sortBy = "jobTime";
         }
 
