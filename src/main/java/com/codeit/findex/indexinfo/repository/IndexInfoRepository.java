@@ -10,4 +10,6 @@ public interface IndexInfoRepository extends JpaRepository<IndexInfo, Long>, Ind
     Boolean existsByIndexClassificationAndIndexName(String indexClassification, String indexName);
 
     Optional<IndexInfo> findByIndexName(String idxNm);
+
+    IndexInfo findByIndexNameAndIndexClassification(String indexName, String indexName1);
 }
