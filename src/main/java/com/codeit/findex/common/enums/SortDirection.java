@@ -1,4 +1,4 @@
-package com.codeit.findex.indexinfo.enums;
+package com.codeit.findex.common.enums;
 
 public enum SortDirection {
 
