@@ -23,6 +23,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -36,11 +37,11 @@ public class DataSyncRepository {
 
     @Value("${findex.api.url}")  private String apiUrl;
 
-    private IndexInfoRepository indexInfoRepository;
+    private final IndexInfoRepository indexInfoRepository;
 
-    private IndexDataRepository indexDataRepository;
+    private final IndexDataRepository indexDataRepository;
 
-    private SyncJobRepository syncJobRepository;
+    private final SyncJobRepository syncJobRepository;
 
     private final int MAX_RETRY = 3;
 
@@ -51,6 +52,53 @@ public class DataSyncRepository {
         urlBuilder.append("?serviceKey=").append(apiKey);
         urlBuilder.append("&pageNo=").append(pageNo);
         urlBuilder.append("&numOfRows=").append(numOfRows);
+        urlBuilder.append("&resultType=json");
+
+        return urlBuilder;
+    }
+
+    @Transactional
+    public StringBuilder createUrl(int pageNo, int numOfRows, LocalDate baseDateFrom, LocalDate baseDateTo) {
+        StringBuilder urlBuilder = new StringBuilder(apiUrl);
+        urlBuilder.append("?serviceKey=").append(apiKey);
+        urlBuilder.append("&pageNo=").append(pageNo);
+        urlBuilder.append("&numOfRows=").append(numOfRows);
+        urlBuilder.append("&beginBasDt=").append(baseDateFrom.toString());
+        urlBuilder.append("&endBasDt=").append(baseDateTo.toString());
+        urlBuilder.append("&resultType=json");
+
+        return urlBuilder;
+    }
+
+    @Transactional
+    public StringBuilder createUrl(int pageNo, int numOfRows, String indexName) {
+        StringBuilder urlBuilder = new StringBuilder(apiUrl);
+        urlBuilder.append("?serviceKey=").append(apiKey);
+        urlBuilder.append("&pageNo=").append(pageNo);
+        urlBuilder.append("&numOfRows=").append(numOfRows);
+        try {
+            urlBuilder.append("&idxNm=").append(URLEncoder.encode(indexName, "UTF-8"));
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
+        urlBuilder.append("&resultType=json");
+
+        return urlBuilder;
+    }
+
+    @Transactional
+    public StringBuilder createUrl(int pageNo, int numOfRows, String idxNm, LocalDate baseDateFrom, LocalDate baseDateTo) {
+        StringBuilder urlBuilder = new StringBuilder(apiUrl);
+        urlBuilder.append("?serviceKey=").append(apiKey);
+        urlBuilder.append("&pageNo=").append(pageNo);
+        urlBuilder.append("&numOfRows=").append(numOfRows);
+        try {
+            urlBuilder.append("&idxNm=").append(URLEncoder.encode(idxNm, "UTF-8"));
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
+        urlBuilder.append("&beginBasDt=").append(baseDateFrom.toString());
+        urlBuilder.append("&endBasDt=").append(baseDateTo.toString());
         urlBuilder.append("&resultType=json");
 
         return urlBuilder;
@@ -101,6 +149,8 @@ public class DataSyncRepository {
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
             conn.setRequestProperty("Content-type", "application/json");
+            conn.setRequestProperty("Accept", "application/json");
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0");
             int code = conn.getResponseCode();
             System.out.println("Response code: " + code);
             if (code != HttpURLConnection.HTTP_OK) {
@@ -157,10 +207,11 @@ public class DataSyncRepository {
             } catch (Exception e) {
                 Optional<SyncJob> syncInfoFailJob = syncJobRepository.findByIndexInfoAndJobType(indexInfo, "INDEX_INFO");
                 syncInfoFailJob.ifPresent(syncJob -> {syncJob.setResult("FAIL");});
-
+                syncJobRepository.save(syncInfoFailJob.get());
 
                 Optional<SyncJob> syncDataFailJob = syncJobRepository.findByIndexInfoAndJobTypeAndTargetDate(indexInfo, "INDEX_DATA", item.getBasDt());
                 syncDataFailJob.ifPresent(syncJob -> {syncJob.setResult("FAIL");});
+                syncJobRepository.save(syncDataFailJob.get());
 
                 e.printStackTrace();
             }
@@ -170,7 +221,85 @@ public class DataSyncRepository {
         syncJobRepository.saveAll(syncJobsList);
     }
 
-    private IndexInfo toIndexInfo(Item item) {
+    @Transactional
+    public Set<SyncJob> storeIndexInfoToDb(List<Item> items, String ip) {
+        Set<SyncJob> syncJobsList = new HashSet<>();
+
+        for (Item item : items) {
+            IndexInfo indexInfo = null;
+            try {
+                indexInfo = toIndexInfo(item);
+                indexInfo = indexInfoRepository.save(indexInfo);
+
+                SyncJob syncInfoJob = toSyncJob(item, indexInfo, "INDEX_INFO");
+                syncInfoJob.setWorker(ip);
+                syncJobsList.add(syncInfoJob);
+            } catch (Exception e) {
+                Optional<SyncJob> syncInfoFailJob = syncJobRepository.findByIndexInfoAndJobType(indexInfo, "INDEX_INFO");
+                syncInfoFailJob.ifPresent(syncJob -> {
+                    syncJob.setResult("FAIL");
+                    syncJob.setWorker(ip);
+                });
+                syncJobRepository.save(syncInfoFailJob.get());
+                e.printStackTrace();
+            }
+        }
+
+        syncJobRepository.saveAll(syncJobsList);
+
+        return syncJobsList;
+    }
+
+    @Transactional
+    public Set<SyncJob> storeIndexDataToDb(List<Item> items, String ip) {
+        Set<SyncJob> syncJobsList = new HashSet<>();
+        Set<IndexData> indexDataList = new HashSet<>();
+
+        for (Item item : items) {
+            IndexInfo indexInfo = null;
+            try {
+                indexInfo = toIndexInfo(item);
+                indexInfo = indexInfoRepository.save(indexInfo);
+
+                IndexData indexData = toIndexData(item, indexInfo);
+
+                indexDataList.add(indexData);
+
+                SyncJob syncInfoJob = toSyncJob(item, indexInfo, "INDEX_INFO");
+                syncInfoJob.setWorker(ip);
+                System.out.println("IP: " + ip);
+                syncJobsList.add(syncInfoJob);
+
+                SyncJob syncDataJob = toSyncJob(item, indexInfo, "INDEX_DATA");
+                syncDataJob.setWorker(ip);
+                syncJobsList.add(syncDataJob);
+            } catch (Exception e) {
+                Optional<SyncJob> syncInfoFailJob = syncJobRepository.findByIndexInfoAndJobType(indexInfo, "INDEX_INFO");
+                syncInfoFailJob.ifPresent(syncJob -> {
+                    syncJob.setResult("FAIL");
+                    syncJob.setWorker(ip);
+                });
+                syncJobRepository.save(syncInfoFailJob.get());
+
+                Optional<SyncJob> syncDataFailJob = syncJobRepository.findByIndexInfoAndJobTypeAndTargetDate(indexInfo, "INDEX_DATA", item.getBasDt());
+                syncDataFailJob.ifPresent(syncJob -> {
+                    syncJob.setResult("FAIL");
+                    syncJob.setWorker(ip);
+                });
+                syncJobRepository.save(syncDataFailJob.get());
+
+                e.printStackTrace();
+            }
+        }
+
+        indexDataRepository.saveAll(indexDataList);
+        syncJobRepository.saveAll(syncJobsList);
+
+        return syncJobsList;
+    }
+
+    @Transactional
+    protected IndexInfo toIndexInfo(Item item) {
         IndexInfo indexInfo = indexInfoRepository.findByIndexName(item.getIdxNm())
                 .orElseGet(IndexInfo::new);
 
@@ -184,7 +313,8 @@ public class DataSyncRepository {
         return indexInfo;
     }
 
-    private IndexData toIndexData(Item item, IndexInfo indexInfo) {
+    @Transactional
+    protected IndexData toIndexData(Item item, IndexInfo indexInfo) {
         IndexData indexData = indexDataRepository.findByIndexInfoAndBaseDate(indexInfo, item.getBasDt())
                 .orElseGet(IndexData::new);
 
@@ -204,7 +334,8 @@ public class DataSyncRepository {
         return indexData;
     }
 
-    private SyncJob toSyncJob(Item item, IndexInfo indexInfo, String jobType) {
+    @Transactional
+    protected SyncJob toSyncJob(Item item, IndexInfo indexInfo, String jobType) {
         switch(jobType) {
             case "INDEX_INFO" -> {
                 SyncJob syncInfoJob = syncJobRepository.findByIndexInfoAndJobType(indexInfo, jobType)
