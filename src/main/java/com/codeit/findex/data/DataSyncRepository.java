@@ -24,10 +24,7 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 @Component
 @RequiredArgsConstructor
@@ -224,28 +221,36 @@ public class DataSyncRepository {
     @Transactional
     public Set<SyncJob> storeIndexInfoToDb(List<Item> items, String ip) {
         Set<SyncJob> syncJobsList = new HashSet<>();
+        List<IndexInfo> indexInfoBatch = new ArrayList<>();
+        List<SyncJob> syncJobBatch = new ArrayList<>();
 
         for (Item item : items) {
-            IndexInfo indexInfo = null;
-            try {
-                indexInfo = toIndexInfo(item);
-                indexInfo = indexInfoRepository.save(indexInfo);
+            IndexInfo indexInfo = toIndexInfo(item);
 
-                SyncJob syncInfoJob = toSyncJob(item, indexInfo, "INDEX_INFO");
-                syncInfoJob.setWorker(ip);
-                syncJobsList.add(syncInfoJob);
-            } catch (Exception e) {
-                Optional<SyncJob> syncInfoFailJob = syncJobRepository.findByIndexInfoAndJobType(indexInfo, "INDEX_INFO");
-                syncInfoFailJob.ifPresent(syncJob -> {
-                    syncJob.setResult("FAIL");
-                    syncJob.setWorker(ip);
-                });
-                syncJobRepository.save(syncInfoFailJob.get());
-                e.printStackTrace();
+            IndexInfo existedIndexInfo = indexInfoRepository.findByIndexName(indexInfo.getIndexName()).orElse(null);
+            if (existedIndexInfo != null) {
+                if (!entityEquals(indexInfo, existedIndexInfo)) {
+                    existedIndexInfo.setIndexClassification(indexInfo.getIndexClassification());
+                    existedIndexInfo.setIndexName(indexInfo.getIndexName());
+                    existedIndexInfo.setBasePointInTime(indexInfo.getBasePointInTime());
+                    existedIndexInfo.setBaseIndex(indexInfo.getBaseIndex());
+                    existedIndexInfo.setSourceType(indexInfo.getSourceType());
+                    existedIndexInfo.setFavorite(indexInfo.getFavorite());
+
+                    indexInfoBatch.add(existedIndexInfo);
+                }
+            } else {
+                indexInfoBatch.add(indexInfo);
             }
+
+            SyncJob syncJob = toSyncJob(item, indexInfo, "INDEX_INFO");
+            syncJob.setWorker(ip);
+            syncJobBatch.add(syncJob);
         }
 
-        syncJobRepository.saveAll(syncJobsList);
+        indexInfoRepository.saveAll(indexInfoBatch);
+        syncJobRepository.saveAll(syncJobBatch);
+        syncJobsList.addAll(syncJobBatch);
 
         return syncJobsList;
     }
@@ -253,49 +258,52 @@ public class DataSyncRepository {
     @Transactional
     public Set<SyncJob> storeIndexDataToDb(List<Item> items, String ip) {
         Set<SyncJob> syncJobsList = new HashSet<>();
+        List<IndexInfo> indexInfoBatch = new ArrayList<>();
+        List<IndexData> indexDataBatch = new ArrayList<>();
+        List<SyncJob> syncJobBatch = new ArrayList<>();
         Set<IndexData> indexDataList = new HashSet<>();
 
         for (Item item : items) {
-            IndexInfo indexInfo = null;
-            try {
-                indexInfo = toIndexInfo(item);
-                indexInfo = indexInfoRepository.save(indexInfo);
+            IndexInfo indexInfo = toIndexInfo(item);
+            IndexInfo existedIndexInfo = indexInfoRepository.findByIndexName(indexInfo.getIndexName()).orElse(null);
 
-                IndexData indexData = toIndexData(item, indexInfo);
+            if (existedIndexInfo != null) {
+                if (!entityEquals(indexInfo, existedIndexInfo)) {
+                    existedIndexInfo.setIndexClassification(indexInfo.getIndexClassification());
+                    existedIndexInfo.setIndexName(indexInfo.getIndexName());
+                    existedIndexInfo.setBasePointInTime(indexInfo.getBasePointInTime());
+                    existedIndexInfo.setBaseIndex(indexInfo.getBaseIndex());
+                    existedIndexInfo.setSourceType(indexInfo.getSourceType());
+                    existedIndexInfo.setFavorite(indexInfo.getFavorite());
 
-                indexDataList.add(indexData);
+                    indexInfoBatch.add(existedIndexInfo);
 
-                SyncJob syncInfoJob = toSyncJob(item, indexInfo, "INDEX_INFO");
-                syncInfoJob.setWorker(ip);
-                System.out.println("IP: " + ip);
-                syncJobsList.add(syncInfoJob);
-
-                SyncJob syncDataJob = toSyncJob(item, indexInfo, "INDEX_DATA");
-                syncDataJob.setWorker(ip);
-                syncJobsList.add(syncDataJob);
-            } catch (Exception e) {
-                Optional<SyncJob> syncInfoFailJob = syncJobRepository.findByIndexInfoAndJobType(indexInfo, "INDEX_INFO");
-                syncInfoFailJob.ifPresent(syncJob -> {
-                    syncJob.setResult("FAIL");
-                    syncJob.setWorker(ip);
-                });
-                syncJobRepository.save(syncInfoFailJob.get());
-
-                Optional<SyncJob> syncDataFailJob = syncJobRepository.findByIndexInfoAndJobTypeAndTargetDate(indexInfo, "INDEX_DATA", item.getBasDt());
-                syncDataFailJob.ifPresent(syncJob -> {
-                    syncJob.setResult("FAIL");
-                    syncJob.setWorker(ip);
-                });
-                syncJobRepository.save(syncDataFailJob.get());
-
-                e.printStackTrace();
+                }
+            } else {
+                indexInfoBatch.add(indexInfo);
             }
+
+            IndexData indexData = toIndexData(item, indexInfo);
+            indexDataList.add(indexData);
+
+            SyncJob syncJob = toSyncJob(item, indexInfo, "INDEX_DATA");
+            syncJob.setWorker(ip);
+            syncJobBatch.add(syncJob);
         }
 
-        indexDataRepository.saveAll(indexDataList);
-        syncJobRepository.saveAll(syncJobsList);
+        indexInfoRepository.saveAll(indexInfoBatch);
+        indexDataRepository.saveAll(indexDataBatch);
+        syncJobRepository.saveAll(syncJobBatch);
 
+        syncJobsList.addAll(syncJobBatch);
         return syncJobsList;
+    }
+
+    private boolean entityEquals(IndexInfo a, IndexInfo b) {
+        if (a == b) return true;
+        if (a == null || b == null) return false;
+
+        return a.equals(b);
     }
 
     @Transactional

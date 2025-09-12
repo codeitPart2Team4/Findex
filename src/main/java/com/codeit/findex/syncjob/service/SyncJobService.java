@@ -1,7 +1,9 @@
 package com.codeit.findex.syncjob.service;
 
 import com.codeit.findex.common.dto.PageResponse;
+import com.codeit.findex.common.error.errorcode.IndexInfoErrorCode;
 import com.codeit.findex.common.error.errorcode.SyncJobErrorCode;
+import com.codeit.findex.common.error.exception.IndexInfoException;
 import com.codeit.findex.common.error.exception.SyncJobException;
 import com.codeit.findex.data.DataSyncRepository;
 import com.codeit.findex.data.IndexApiParser;
@@ -22,7 +24,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Transactional
@@ -43,13 +47,11 @@ public class SyncJobService {
         int pageSize = 1000;
         int numOfRows = 1000;
 
-        List<SyncJobDto> syncJobDtoList = new ArrayList<>();
-
         List<IndexInfo> indexInfoList = indexInfoRepository.findAll();
+        List<SyncJobDto> syncJobDtoList = indexInfoList.parallelStream()
+                .flatMap(indexInfo -> fetchAndStoreIndexInfo(indexInfo.getIndexName(), ip).stream())
+                .toList();
 
-        for (IndexInfo indexInfo : indexInfoList) {
-            syncJobDtoList.addAll(fetchAndStoreIndexInfo(indexInfo.getIndexName(), numOfRows, pageSize, ip));
-        }
 
         return syncJobDtoList;
     }
@@ -58,21 +60,41 @@ public class SyncJobService {
         int pageSize = 1000;
         int numOfRows = 1000;
 
-        List<SyncJobDto> syncJobDtoList = new ArrayList<>();
+        List<Long> indexIds = request.indexInfoIds();
 
-        if (request.indexInfoIds().isEmpty()) {
-            syncJobDtoList.addAll(fetchAndStoreIndexData(null, request.baseDateFrom(), request.baseDateTo(), numOfRows, pageSize, ip));
-        } else {
-            for(Long indexId : request.indexInfoIds()) {
-                if (!indexInfoRepository.existsById(indexId)) {
-                    throw new SyncJobException(SyncJobErrorCode.ASYNC_JOB_INVALID_REQUEST);
-                }
-                String indexName = indexInfoRepository.findById(indexId).get().getIndexName();
-                syncJobDtoList.addAll(fetchAndStoreIndexData(indexName, request.baseDateFrom(), request.baseDateTo(), numOfRows, pageSize, ip));
-            }
+        if (indexIds == null || indexIds.isEmpty()) {
+            return fetchAndStoreIndexData(null, request.baseDateFrom(), request.baseDateTo(), ip);
         }
 
-        return syncJobDtoList;
+        return indexIds.parallelStream()
+                .map(indexId -> {
+                    Optional<IndexInfo> info = indexInfoRepository.findById(indexId);
+                    if (info.isEmpty()) {
+                        throw new IndexInfoException(IndexInfoErrorCode.INDEX_INFO_REQUIRED_FIELD_MISSING);
+                    }
+                    String indexName = info.get().getIndexName();
+                    return fetchAndStoreIndexData(indexName, request.baseDateFrom(), request.baseDateTo(), ip);
+                })
+                .flatMap(Collection::stream)
+                .toList();
+
+//        List<SyncJobDto> syncJobDtoList = new ArrayList<>();
+//
+//
+//
+//        if (request.indexInfoIds().isEmpty()) {
+//            syncJobDtoList.addAll(fetchAndStoreIndexData(null, request.baseDateFrom(), request.baseDateTo(), numOfRows, pageSize, ip));
+//        } else {
+//            for(Long indexId : request.indexInfoIds()) {
+//                if (!indexInfoRepository.existsById(indexId)) {
+//                    throw new SyncJobException(SyncJobErrorCode.ASYNC_JOB_INVALID_REQUEST);
+//                }
+//                String indexName = indexInfoRepository.findById(indexId).get().getIndexName();
+//                syncJobDtoList.addAll(fetchAndStoreIndexData(indexName, request.baseDateFrom(), request.baseDateTo(), numOfRows, pageSize, ip));
+//            }
+//        }
+//
+//        return syncJobDtoList;
     }
 
     public PageResponse<SyncJobDto> getSyncJobs(
@@ -152,8 +174,10 @@ public class SyncJobService {
         return String.valueOf(entity.getId());
     }
 
-    private List<SyncJobDto> fetchAndStoreIndexInfo(String indexName, int numOfRows, int pageSize, String ip) {
+    private List<SyncJobDto> fetchAndStoreIndexInfo(String indexName, String ip) {
         int pageNo = 1;
+        int pageSize = 1000;
+        int numOfRows = 1000;
         int totalPages = Integer.MAX_VALUE;
         List<SyncJobDto> syncJobDtoList = new ArrayList<>();
 
@@ -168,20 +192,19 @@ public class SyncJobService {
                 }
 
                 Body body = indexApiParser.parseBody(responseJson);
-                System.out.println("총 데이터 수: " + body.getTotalCount());
-
                 if (pageNo == 1) {
                     totalPages = (int) Math.ceil(body.getTotalCount() / (double) pageSize);
                 }
 
                 List<Item> items = indexApiParser.parseItems(responseJson);
+
                 syncJobDtoList.addAll(dataSyncRepository.storeIndexInfoToDb(items, ip).stream()
-                        .filter(data -> data.getJobType().equals("INDEX_INFO"))
+                        .filter(job -> job.getJobType().equals("INDEX_INFO"))
                         .map(syncJobMapper::toDto).toList());
 
                 pageNo++;
             } catch (InterruptedException e) {
-                System.err.println("동기화 실패: ");
+                System.err.println("지수 정보 동기화 실패: indexName - " + indexName + ", pageNo - " + pageNo);
                 e.printStackTrace();
                 break;
             }
@@ -190,14 +213,16 @@ public class SyncJobService {
     }
 
 
-    private List<SyncJobDto> fetchAndStoreIndexData(String indexName, LocalDate baseDateFrom, LocalDate baseDateTo, int numOfRows, int pageSize, String ip) {
+    private List<SyncJobDto> fetchAndStoreIndexData(String indexName, LocalDate baseDateFrom, LocalDate baseDateTo, String ip) {
         int pageNo = 1;
+        int pageSize = 1000;
+        int numOfRows = 1000;
         int totalPages = Integer.MAX_VALUE;
         List<SyncJobDto> syncJobDtoList = new ArrayList<>();
 
         while (pageNo <= totalPages) {
             try {
-                StringBuilder urlBuilder = indexName == null
+                StringBuilder urlBuilder = (indexName == null)
                     ? dataSyncRepository.createUrl(pageNo, numOfRows, baseDateFrom, baseDateTo)
                     : dataSyncRepository.createUrl(pageNo, numOfRows, indexName, baseDateFrom, baseDateTo);
                 String responseJson = dataSyncRepository.callApiWithRetry(urlBuilder);
@@ -216,10 +241,10 @@ public class SyncJobService {
 
                 List<Item> items = indexApiParser.parseItems(responseJson);
 
-                System.out.println("processItems 호출 - 아이템 수: " + items.size());
-                syncJobDtoList.addAll(dataSyncRepository.storeIndexDataToDb(items, ip)
-                        .stream().filter(data -> data.getJobType().equals("INDEX_DATA"))
+                syncJobDtoList.addAll(dataSyncRepository.storeIndexDataToDb(items, ip).stream()
                         .map(syncJobMapper::toDto).toList());
+//                        .filter(data -> data.getJobType().equals("INDEX_DATA"))
+//                        .map(syncJobMapper::toDto).toList());
 
                 pageNo++;
             } catch (InterruptedException e) {
@@ -228,7 +253,6 @@ public class SyncJobService {
                 break;
             }
         }
-
         return syncJobDtoList;
     }
 
