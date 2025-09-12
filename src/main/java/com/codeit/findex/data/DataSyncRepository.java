@@ -40,8 +40,6 @@ public class DataSyncRepository {
 
     private final SyncJobRepository syncJobRepository;
 
-    private final int MAX_RETRY = 3;
-
 
     @Transactional
     public StringBuilder createUrl(int pageNo, int numOfRows) {
@@ -94,7 +92,7 @@ public class DataSyncRepository {
     }
 
     @Transactional
-    public StringBuilder createUrl(int pageNo, int numOfRows, String idxNm, String beginBasDt) throws UnsupportedEncodingException {
+    public StringBuilder createUrl(int pageNo, int numOfRows, String idxNm, String beginBasDt) {
         StringBuilder urlBuilder = new StringBuilder(apiUrl);
         urlBuilder.append("?serviceKey=").append(apiKey);
         urlBuilder.append("&pageNo=").append(pageNo);
@@ -110,6 +108,7 @@ public class DataSyncRepository {
     public String callApiWithRetry(StringBuilder urlBuilder) throws InterruptedException {
         int retryCount = 0;
 
+        int MAX_RETRY = 3;
         while (retryCount < MAX_RETRY) {
             String responseJson = callApi(urlBuilder);
 
@@ -253,7 +252,6 @@ public class DataSyncRepository {
         List<IndexInfo> indexInfoBatch = new ArrayList<>();
         List<IndexData> indexDataBatch = new ArrayList<>();
         List<SyncJob> syncJobBatch = new ArrayList<>();
-        Set<IndexData> indexDataList = new HashSet<>();
 
         for (Item item : items) {
             IndexInfo indexInfo = toIndexInfo(item);
@@ -276,7 +274,7 @@ public class DataSyncRepository {
             }
 
             IndexData indexData = toIndexData(item, indexInfo);
-            indexDataList.add(indexData);
+            indexDataBatch.add(indexData);
 
             SyncJob syncJob = toSyncJob(item, indexInfo, "INDEX_DATA");
             syncJob.setWorker(ip);
