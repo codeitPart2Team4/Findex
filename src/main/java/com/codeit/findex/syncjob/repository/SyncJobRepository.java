@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.time.LocalDate;
 import java.util.Optional;
 
-public interface SyncJobRepository extends JpaRepository<SyncJob, Long> {
+public interface SyncJobRepository extends JpaRepository<SyncJob, Long>, SyncJobQueryRepository {
 
     Optional<SyncJob> findByIndexInfoAndJobType(IndexInfo indexInfo, String jobType);
 
