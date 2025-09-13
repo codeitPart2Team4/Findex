@@ -3,7 +3,6 @@ package com.codeit.findex.data;
 import com.codeit.findex.data.dto.Body;
 import com.codeit.findex.data.dto.Item;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import java.util.*;
 
