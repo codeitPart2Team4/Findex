@@ -1,6 +1,7 @@
 package com.codeit.findex.syncjob.service;
 
 import com.codeit.findex.common.dto.PageResponse;
+import com.codeit.findex.common.dto.PageSyncResponse;
 import com.codeit.findex.common.enums.SourceType;
 import com.codeit.findex.common.error.errorcode.IndexInfoErrorCode;
 import com.codeit.findex.common.error.exception.IndexInfoException;
@@ -77,7 +78,7 @@ public class SyncJobService {
                 .toList();
     }
 
-    public PageResponse<SyncJobDto> getSyncJobs(
+    public PageSyncResponse<SyncJobDto> getSyncJobs(
             String          jobType,
             Long            indexInfoId,
             LocalDate       baseDateFrom,
@@ -86,6 +87,7 @@ public class SyncJobService {
             LocalDateTime   jobTimeFrom,
             LocalDateTime   jobTimeTo,
             String          status,
+            Long            idAfter,
             String          cursor,
             String          sortField,
             SortDirection   sortDirection,
@@ -100,8 +102,9 @@ public class SyncJobService {
                 jobTimeFrom,
                 jobTimeTo,
                 status,
-                sortField,
+                idAfter,
                 cursor,
+                sortField,
                 sortDirection,
                 size
         );
@@ -117,11 +120,11 @@ public class SyncJobService {
                 .toList();
 
         String nextCursor = null;
-        Long idAfter = null;
+        Long nextIdAfter = null;
         if(hasNext && !syncJobs.isEmpty()) {
             SyncJob last = syncJobs.get(syncJobs.size() - 1);
             nextCursor = buildCursor(last, sortField);
-            idAfter = last.getId();
+            nextIdAfter = last.getId();
         }
 
         long totalElements = syncJobRepository.countByConditions(
@@ -135,9 +138,10 @@ public class SyncJobService {
                 jobTimeTo
         );
 
-        return new PageResponse<>(
+        return new PageSyncResponse<>(
                 syncJobDtos,
                 nextCursor,
+                nextIdAfter,
                 size,
                 totalElements,
                 hasNext
@@ -145,6 +149,10 @@ public class SyncJobService {
     }
 
     private String buildCursor(SyncJob entity, String sortField) {
+        if (sortField == null) {
+            sortField = "jobTime"; // 기본값 fallback
+        }
+        sortField = sortField.trim();
         if ("jobTime".equals(sortField)) {
 //           return entity.getJobTime() + ":" + entity.getId();
            return entity.getJobTime().toString();
