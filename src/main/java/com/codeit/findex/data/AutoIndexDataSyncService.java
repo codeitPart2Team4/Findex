@@ -28,6 +28,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Component
@@ -60,8 +61,9 @@ public class AutoIndexDataSyncService {
 
                 Optional<SyncJob> trueSyncJob = syncJobRepository.findByIndexInfoAndJobType(trueIndexInfo, "INDEX_INFO");
 
-                String beginBasDt = trueSyncJob.map(syncJob -> syncJob.getJobTime().toLocalDate().toString())
-                        .orElseGet(() -> trueIndexInfo.getBasePointInTime().toString());
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
+                String beginBasDt = trueSyncJob.map(syncJob -> syncJob.getJobTime().toLocalDate().format(formatter))
+                        .orElseGet(() -> trueIndexInfo.getBasePointInTime().format(formatter));
 
                 System.out.println("자동 연동 업데이트: autoId - " + autoSyncConfig.getId() +
                         ", 지수 - " + trueIndexInfo.getIndexName() +
