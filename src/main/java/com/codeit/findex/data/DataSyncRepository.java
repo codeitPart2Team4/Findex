@@ -17,13 +17,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Component
@@ -54,13 +54,14 @@ public class DataSyncRepository {
 
     @Transactional
     public StringBuilder createUrl(int pageNo, int numOfRows, LocalDate baseDateFrom, LocalDate baseDateTo) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
         StringBuilder urlBuilder = new StringBuilder(apiUrl);
         urlBuilder.append("?serviceKey=").append(apiKey);
+        urlBuilder.append("&resultType=json");
         urlBuilder.append("&pageNo=").append(pageNo);
         urlBuilder.append("&numOfRows=").append(numOfRows);
-        urlBuilder.append("&beginBasDt=").append(baseDateFrom.toString());
-        urlBuilder.append("&endBasDt=").append(baseDateTo.toString());
-        urlBuilder.append("&resultType=json");
+        urlBuilder.append("&beginBasDt=").append(baseDateFrom.format(formatter));
+        urlBuilder.append("&endBasDt=").append(baseDateTo.format(formatter));
 
         return urlBuilder;
     }
@@ -79,14 +80,15 @@ public class DataSyncRepository {
 
     @Transactional
     public StringBuilder createUrl(int pageNo, int numOfRows, String idxNm, LocalDate baseDateFrom, LocalDate baseDateTo) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
         StringBuilder urlBuilder = new StringBuilder(apiUrl);
         urlBuilder.append("?serviceKey=").append(apiKey);
+        urlBuilder.append("&resultType=json");
         urlBuilder.append("&pageNo=").append(pageNo);
         urlBuilder.append("&numOfRows=").append(numOfRows);
+        urlBuilder.append("&beginBasDt=").append(baseDateFrom.format(formatter));
+        urlBuilder.append("&endBasDt=").append(baseDateTo.format(formatter));
         urlBuilder.append("&idxNm=").append(URLEncoder.encode(idxNm, StandardCharsets.UTF_8));
-        urlBuilder.append("&beginBasDt=").append(baseDateFrom.toString());
-        urlBuilder.append("&endBasDt=").append(baseDateTo.toString());
-        urlBuilder.append("&resultType=json");
 
         return urlBuilder;
     }
