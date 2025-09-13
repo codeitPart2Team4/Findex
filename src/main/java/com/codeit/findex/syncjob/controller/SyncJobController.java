@@ -1,7 +1,6 @@
 package com.codeit.findex.syncjob.controller;
 
-import com.codeit.findex.common.dto.PageResponse;
-import com.codeit.findex.common.dto.PageSyncResponse;
+import com.codeit.findex.common.dto.CursorPageResponse;
 import com.codeit.findex.common.enums.SortDirection;
 import com.codeit.findex.syncjob.dto.IndexDataSyncRequest;
 import com.codeit.findex.syncjob.dto.SyncJobDto;
@@ -42,7 +41,7 @@ public class SyncJobController {
     }
 
     @GetMapping
-    public PageSyncResponse<SyncJobDto> getSyncJobs(
+    public CursorPageResponse<SyncJobDto> getSyncJobs(
             @RequestParam(required = false) String jobType,
             @RequestParam(required = false) Long indexInfoId,
             @RequestParam(required = false) LocalDate baseDateFrom,

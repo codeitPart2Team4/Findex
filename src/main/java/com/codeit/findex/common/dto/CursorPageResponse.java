@@ -2,7 +2,7 @@ package com.codeit.findex.common.dto;
 
 import java.util.List;
 
-public record PageSyncResponse<T>(
+public record CursorPageResponse<T>(
     List<T> content,
     String nextCursor,
     Long nextIdAfter,

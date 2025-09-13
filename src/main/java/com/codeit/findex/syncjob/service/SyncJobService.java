@@ -1,7 +1,6 @@
 package com.codeit.findex.syncjob.service;
 
-import com.codeit.findex.common.dto.PageResponse;
-import com.codeit.findex.common.dto.PageSyncResponse;
+import com.codeit.findex.common.dto.CursorPageResponse;
 import com.codeit.findex.common.enums.SourceType;
 import com.codeit.findex.common.error.errorcode.IndexInfoErrorCode;
 import com.codeit.findex.common.error.exception.IndexInfoException;
@@ -78,7 +77,7 @@ public class SyncJobService {
                 .toList();
     }
 
-    public PageSyncResponse<SyncJobDto> getSyncJobs(
+    public CursorPageResponse<SyncJobDto> getSyncJobs(
             String          jobType,
             Long            indexInfoId,
             LocalDate       baseDateFrom,
@@ -138,7 +137,7 @@ public class SyncJobService {
                 jobTimeTo
         );
 
-        return new PageSyncResponse<>(
+        return new CursorPageResponse<>(
                 syncJobDtos,
                 nextCursor,
                 nextIdAfter,
