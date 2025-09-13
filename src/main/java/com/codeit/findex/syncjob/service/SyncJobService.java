@@ -45,9 +45,7 @@ public class SyncJobService {
 
     public List<SyncJobDto> syncIndexInfo(String ip) {
         List<IndexInfo> indexInfoList = indexInfoRepository.findBySourceType(SourceType.OPEN_API);
-//        return indexInfoList.parallelStream()
-//                .flatMap(indexInfo -> fetchAndStoreIndexInfo(indexInfo.getIndexName(), ip).stream())
-//                .toList();
+
         return indexInfoList.parallelStream()
                 .map(indexInfo -> {
                     SyncJob lastSyncJob = syncJobRepository.findByIndexInfoAndJobType(indexInfo, "INDEX_INFO")
@@ -153,10 +151,8 @@ public class SyncJobService {
         }
         sortField = sortField.trim();
         if ("jobTime".equals(sortField)) {
-//           return entity.getJobTime() + ":" + entity.getId();
            return entity.getJobTime().toString();
         } else if ("targetDate".equals(sortField)) {
-//            return entity.getTargetDate() + ":" + entity.getId();
             return entity.getTargetDate().toString();
         }
 
@@ -237,8 +233,6 @@ public class SyncJobService {
 
                 syncJobDtoList.addAll(dataSyncRepository.storeIndexDataToDb(items, ip).stream()
                         .map(syncJobMapper::toDto).toList());
-//                        .filter(data -> data.getJobType().equals("INDEX_DATA"))
-//                        .map(syncJobMapper::toDto).toList());
 
                 pageNo++;
             } catch (InterruptedException e) {
