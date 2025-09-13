@@ -9,7 +9,7 @@ import com.codeit.findex.indexinfo.dto.IndexInfoCreateRequest;
 import com.codeit.findex.indexinfo.dto.IndexInfoDto;
 import com.codeit.findex.indexinfo.dto.IndexInfoSummaryDto;
 import com.codeit.findex.indexinfo.dto.IndexInfoUpdateRequest;
-import com.codeit.findex.indexinfo.enums.SortDirection;
+import com.codeit.findex.common.enums.SortDirection;
 import com.codeit.findex.indexinfo.entity.IndexInfo;
 import com.codeit.findex.indexinfo.mapper.IndexInfoMapper;
 import com.codeit.findex.indexinfo.repository.IndexInfoRepository;

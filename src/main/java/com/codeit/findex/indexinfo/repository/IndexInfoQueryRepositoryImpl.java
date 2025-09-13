@@ -1,6 +1,6 @@
 package com.codeit.findex.indexinfo.repository;
 
-import com.codeit.findex.indexinfo.enums.SortDirection;
+import com.codeit.findex.common.enums.SortDirection;
 import com.codeit.findex.indexinfo.entity.IndexInfo;
 import com.codeit.findex.indexinfo.entity.QIndexInfo;
 import com.querydsl.core.BooleanBuilder;

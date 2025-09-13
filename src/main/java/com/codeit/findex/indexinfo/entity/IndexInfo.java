@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Entity
 @Table(name = "index_info")
@@ -48,6 +49,18 @@ public class IndexInfo extends BaseEntity {
         this.baseIndex = baseIndex;
         this.sourceType = sourceType;
         this.favorite = favorite;
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (object == null || getClass() != object.getClass()) return false;
+        IndexInfo indexInfo = (IndexInfo) object;
+        return Objects.equals(indexClassification, indexInfo.indexClassification) && Objects.equals(indexName, indexInfo.indexName) && Objects.equals(basePointInTime, indexInfo.basePointInTime);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(indexClassification, indexName, basePointInTime);
     }
 
     public void changeEmployedItemsCount(Integer employedItemsCount) {
