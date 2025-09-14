@@ -2,20 +2,16 @@ package com.codeit.findex.indexinfo.entity;
 
 import com.codeit.findex.common.entity.BaseEntity;
 import com.codeit.findex.common.enums.SourceType;
-import com.codeit.findex.indexdata.entity.IndexData;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
 @Entity
 @Table(name = "index_info")
 @Getter @Setter
-@AllArgsConstructor
 @NoArgsConstructor/*(access = AccessLevel.PROTECTED)*/
 public class IndexInfo extends BaseEntity {
 
@@ -37,9 +33,6 @@ public class IndexInfo extends BaseEntity {
 
     @Column(nullable = false)
     private Boolean favorite = false;
-
-    @OneToMany(mappedBy = "indexInfo", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<IndexData> indexDataList = new ArrayList<>();
 
     public IndexInfo(String indexClassification, String indexName, Integer employedItemsCount, LocalDate basePointInTime, BigDecimal baseIndex, SourceType sourceType, Boolean favorite) {
         this.indexClassification = indexClassification;
