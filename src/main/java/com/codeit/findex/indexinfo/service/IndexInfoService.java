@@ -5,6 +5,7 @@ import com.codeit.findex.autosync.repository.AutoSyncConfigRepository;
 import com.codeit.findex.common.dto.PageResponse;
 import com.codeit.findex.common.enums.SourceType;
 import com.codeit.findex.common.error.exception.IndexInfoException;
+import com.codeit.findex.indexdata.repository.IndexDataRepository;
 import com.codeit.findex.indexinfo.dto.IndexInfoCreateRequest;
 import com.codeit.findex.indexinfo.dto.IndexInfoDto;
 import com.codeit.findex.indexinfo.dto.IndexInfoSummaryDto;
@@ -13,7 +14,9 @@ import com.codeit.findex.common.enums.SortDirection;
 import com.codeit.findex.indexinfo.entity.IndexInfo;
 import com.codeit.findex.indexinfo.mapper.IndexInfoMapper;
 import com.codeit.findex.indexinfo.repository.IndexInfoRepository;
+import com.codeit.findex.syncjob.repository.SyncJobRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +30,8 @@ import static com.codeit.findex.common.error.errorcode.IndexInfoErrorCode.*;
 public class IndexInfoService {
 
     private final IndexInfoRepository indexInfoRepository;
+    private final IndexDataRepository indexDataRepository;
+    private final SyncJobRepository syncJobRepository;
 
     private final IndexInfoMapper indexInfoMapper;
 
@@ -133,7 +138,7 @@ public class IndexInfoService {
     }
 
     public List<IndexInfoSummaryDto> findSummaryList() {
-        return indexInfoRepository.findAll()
+        return indexInfoRepository.findAll(Sort.by(Sort.Direction.ASC, "id"))
                 .stream()
                 .map(indexInfoMapper::toSummaryDto)
                 .toList();
@@ -163,11 +168,12 @@ public class IndexInfoService {
     }
 
     public void delete(Long id) {
-        // IndexInfo -> IndexData CascadeType 설정
-        // IndexInfo.java 참고
-        indexInfoRepository.findById(id)
+        IndexInfo indexInfo = indexInfoRepository.findById(id)
                 .orElseThrow(() -> new IndexInfoException(INDEX_INFO_NOTFOUND));
 
-        indexInfoRepository.deleteById(id);
+        syncJobRepository.deleteByIndexInfoId(indexInfo.getId());
+        autoSyncConfigRepository.deleteByIndexInfoId(indexInfo.getId());
+        indexDataRepository.deleteByIndexInfoId(indexInfo.getId());
+        indexInfoRepository.deleteById(indexInfo.getId());
     }
 }
