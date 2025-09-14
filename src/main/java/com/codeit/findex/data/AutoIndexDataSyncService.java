@@ -2,32 +2,15 @@ package com.codeit.findex.data;
 
 import com.codeit.findex.autosync.entity.AutoSyncConfig;
 import com.codeit.findex.autosync.repository.AutoSyncConfigRepository;
-import com.codeit.findex.autosync.service.AutoSyncConfigService;
-import com.codeit.findex.common.enums.SourceType;
 import com.codeit.findex.data.dto.Body;
 import com.codeit.findex.data.dto.Item;
-import com.codeit.findex.indexdata.entity.IndexData;
-import com.codeit.findex.indexdata.repository.IndexDataRepository;
 import com.codeit.findex.indexinfo.entity.IndexInfo;
-import com.codeit.findex.indexinfo.repository.IndexInfoRepository;
 import com.codeit.findex.syncjob.entity.SyncJob;
 import com.codeit.findex.syncjob.repository.SyncJobRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.json.JSONObject;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
-import java.math.BigDecimal;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -35,9 +18,9 @@ import java.util.*;
 @RequiredArgsConstructor
 public class AutoIndexDataSyncService {
 
-    private SyncJobRepository syncJobRepository;
+    private final SyncJobRepository syncJobRepository;
 
-    private AutoSyncConfigRepository autoSyncConfigRepository;
+    private final AutoSyncConfigRepository autoSyncConfigRepository;
 
     private final DataSyncRepository dataSyncRepository;
 

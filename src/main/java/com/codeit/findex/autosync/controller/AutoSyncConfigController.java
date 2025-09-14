@@ -2,12 +2,11 @@ package com.codeit.findex.autosync.controller;
 
 import com.codeit.findex.autosync.dto.AutoSyncConfigDto;
 import com.codeit.findex.autosync.dto.AutoSyncConfigUpdateRequest;
-import com.codeit.findex.autosync.dto.CursorPageResponse;
 import com.codeit.findex.autosync.service.AutoSyncConfigService;
+import com.codeit.findex.common.dto.CursorPageResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.*;
 
 @RestController

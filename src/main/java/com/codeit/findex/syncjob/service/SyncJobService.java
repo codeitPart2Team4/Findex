@@ -1,6 +1,7 @@
 package com.codeit.findex.syncjob.service;
 
-import com.codeit.findex.common.dto.PageResponse;
+import com.codeit.findex.common.dto.CursorPageResponse;
+import com.codeit.findex.common.enums.SourceType;
 import com.codeit.findex.common.error.errorcode.IndexInfoErrorCode;
 import com.codeit.findex.common.error.exception.IndexInfoException;
 import com.codeit.findex.data.DataSyncRepository;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -42,9 +44,14 @@ public class SyncJobService {
     private final SyncJobMapper syncJobMapper;
 
     public List<SyncJobDto> syncIndexInfo(String ip) {
-        List<IndexInfo> indexInfoList = indexInfoRepository.findAll();
+        List<IndexInfo> indexInfoList = indexInfoRepository.findBySourceType(SourceType.OPEN_API);
+
         return indexInfoList.parallelStream()
-                .flatMap(indexInfo -> fetchAndStoreIndexInfo(indexInfo.getIndexName(), ip).stream())
+                .map(indexInfo -> {
+                    SyncJob lastSyncJob = syncJobRepository.findByIndexInfoAndJobType(indexInfo, "INDEX_INFO")
+                            .orElseGet(null);
+                    return fetchAndStoreIndexInfo(indexInfo.getIndexName(), lastSyncJob.getJobTime(), ip);
+                }).flatMap(Collection::stream)
                 .toList();
     }
 
@@ -68,7 +75,7 @@ public class SyncJobService {
                 .toList();
     }
 
-    public PageResponse<SyncJobDto> getSyncJobs(
+    public CursorPageResponse<SyncJobDto> getSyncJobs(
             String          jobType,
             Long            indexInfoId,
             LocalDate       baseDateFrom,
@@ -93,8 +100,8 @@ public class SyncJobService {
                 jobTimeTo,
                 status,
                 idAfter,
-                sortField,
                 cursor,
+                sortField,
                 sortDirection,
                 size
         );
@@ -110,9 +117,11 @@ public class SyncJobService {
                 .toList();
 
         String nextCursor = null;
+        Long nextIdAfter = null;
         if(hasNext && !syncJobs.isEmpty()) {
             SyncJob last = syncJobs.get(syncJobs.size() - 1);
             nextCursor = buildCursor(last, sortField);
+            nextIdAfter = last.getId();
         }
 
         long totalElements = syncJobRepository.countByConditions(
@@ -126,9 +135,10 @@ public class SyncJobService {
                 jobTimeTo
         );
 
-        return new PageResponse<>(
+        return new CursorPageResponse<>(
                 syncJobDtos,
                 nextCursor,
+                nextIdAfter,
                 size,
                 totalElements,
                 hasNext
@@ -136,25 +146,32 @@ public class SyncJobService {
     }
 
     private String buildCursor(SyncJob entity, String sortField) {
-        if ("jobType".equals(sortField)) {
-           return entity.getJobType() + ":" + entity.getId();
+        if (sortField == null) {
+            sortField = "jobTime"; // 기본값 fallback
+        }
+        sortField = sortField.trim();
+        if ("jobTime".equals(sortField)) {
+           return entity.getJobTime().toString();
         } else if ("targetDate".equals(sortField)) {
-            return entity.getTargetDate() + ":" + entity.getId();
+            return entity.getTargetDate().toString();
         }
 
         return String.valueOf(entity.getId());
     }
 
-    private List<SyncJobDto> fetchAndStoreIndexInfo(String indexName, String ip) {
+    private List<SyncJobDto> fetchAndStoreIndexInfo(String indexName, LocalDateTime lastSyncTime, String ip) {
         int pageNo = 1;
         int pageSize = 1000;
         int numOfRows = 1000;
         int totalPages = Integer.MAX_VALUE;
         List<SyncJobDto> syncJobDtoList = new ArrayList<>();
 
+        LocalDate lastSyncDate = lastSyncTime.plusDays(1).toLocalDate();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
+        String lastSyncDateStr = lastSyncDate.format(formatter);
         while(pageNo <= totalPages) {
             try {
-                StringBuilder urlBuilder = dataSyncRepository.createUrl(pageNo, numOfRows, indexName);
+                StringBuilder urlBuilder = dataSyncRepository.createUrl(pageNo, numOfRows, indexName, lastSyncDateStr);
                 String responseJson = dataSyncRepository.callApiWithRetry(urlBuilder);
 
                 if (responseJson == null || responseJson.isEmpty()) {
@@ -168,6 +185,8 @@ public class SyncJobService {
                 }
 
                 List<Item> items = indexApiParser.parseItems(responseJson);
+
+                items.forEach(System.out::println);
 
                 syncJobDtoList.addAll(dataSyncRepository.storeIndexInfoToDb(items, ip).stream()
                         .filter(job -> job.getJobType().equals("INDEX_INFO"))
@@ -214,8 +233,6 @@ public class SyncJobService {
 
                 syncJobDtoList.addAll(dataSyncRepository.storeIndexDataToDb(items, ip).stream()
                         .map(syncJobMapper::toDto).toList());
-//                        .filter(data -> data.getJobType().equals("INDEX_DATA"))
-//                        .map(syncJobMapper::toDto).toList());
 
                 pageNo++;
             } catch (InterruptedException e) {

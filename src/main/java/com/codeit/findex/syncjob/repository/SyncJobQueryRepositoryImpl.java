@@ -63,10 +63,13 @@ public class SyncJobQueryRepositoryImpl implements SyncJobQueryRepository {
         if(status != null && !status.isBlank()) {
             filters.and(syncJob.result.containsIgnoreCase(status));
         }
-        if(idAfter != null) {
-            filters.and(syncJob.id.gt(idAfter));
+        if (idAfter != null) {
+            if (sortDirection.equals(SortDirection.desc)) {
+                filters.and(syncJob.id.lt(idAfter));
+            } else {
+                filters.and(syncJob.id.gt(idAfter));
+            }
         }
-
         BooleanBuilder conditions = new BooleanBuilder(filters);
         applyCursor(conditions, cursor, sortField, sortDirection, syncJob);
 
@@ -82,17 +85,18 @@ public class SyncJobQueryRepositoryImpl implements SyncJobQueryRepository {
     private void applyCursor(BooleanBuilder filters, String cursor, String sortBy, SortDirection sortDirection, QSyncJob syncJob) {
         if (cursor == null) return;
 
-        if (sortBy == null || sortBy.isBlank()) {
-            sortBy = "jobTime";
-        }
-
-        if (sortDirection == null) {
-            sortDirection = SortDirection.desc;
-        }
 
         String[] parts = cursor.split(":");
+        if (parts.length != 2) {
+            return;
+        }
         String cursorValue = parts[0];
-        Long cursorId = Long.parseLong(parts[1]);
+        Long cursorId;
+        try {
+            cursorId = Long.parseLong(parts[1]);
+        } catch (NumberFormatException e) {
+            return;
+        }
 
         if ("jobTime".equals(sortBy)) {
             filters.and(
@@ -152,14 +156,14 @@ public class SyncJobQueryRepositoryImpl implements SyncJobQueryRepository {
         if(worker != null && !worker.isBlank()) {
             filters.and(syncJob.worker.containsIgnoreCase(worker));
         }
-        if(status != null && !status.isBlank()) {
-            filters.and(syncJob.result.containsIgnoreCase(status));
-        }
         if (jobTimeFrom != null) {
             filters.and(syncJob.jobTime.goe(jobTimeFrom));
         }
         if (jobTimeTo != null) {
             filters.and(syncJob.jobTime.loe(jobTimeTo));
+        }
+        if(status != null && !status.isBlank()) {
+            filters.and(syncJob.result.containsIgnoreCase(status));
         }
 
         Long cnt = queryFactory

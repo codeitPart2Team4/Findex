@@ -1,10 +1,10 @@
 package com.codeit.findex.autosync.service;
 
 import com.codeit.findex.autosync.dto.AutoSyncConfigDto;
-import com.codeit.findex.autosync.dto.CursorPageResponse;
 import com.codeit.findex.autosync.entity.AutoSyncConfig;
 import com.codeit.findex.autosync.mapper.AutoSyncMapper;
 import com.codeit.findex.autosync.repository.AutoSyncConfigRepository;
+import com.codeit.findex.common.dto.CursorPageResponse;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
@@ -38,7 +38,7 @@ public class AutoSyncConfigService {
         Long nextId = hasNext ? configs.get(dtos.size() - 1).getId() : null;
 
         return new CursorPageResponse<>(
-                dtos, null, nextId, size, dtos.size(), hasNext
+                dtos, null, nextId, size, (long) dtos.size(), hasNext
         );
     }
 
