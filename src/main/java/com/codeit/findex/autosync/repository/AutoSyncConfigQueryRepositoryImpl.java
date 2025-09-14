@@ -29,15 +29,15 @@ public class AutoSyncConfigQueryRepositoryImpl implements AutoSyncConfigQueryRep
         }
         if (idAfter != null) {
             if (sortDirection.isAscending()) {
-                where.and(config.id.gt(idAfter));
+                where.and(config.indexInfo.id.gt(idAfter));
             } else {
-                where.and(config.id.lt(idAfter));
+                where.and(config.indexInfo.id.lt(idAfter));
             }
         }
 
         return queryFactory.selectFrom(config)
                 .where(where)
-                .orderBy(sortDirection.isAscending() ? config.id.asc() : config.id.desc())
+                .orderBy(sortDirection.isAscending() ? config.indexInfo.id.asc() : config.indexInfo.id.desc())
                 .limit(size)
                 .fetch();
     }
