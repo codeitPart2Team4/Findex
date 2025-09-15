@@ -65,7 +65,7 @@ Findex는 외부 Open API와 연동하여 금융 지수 데이터를 제공하�
 ---
 ## 🌐 구현 홈페이지
 Railway를 이용하여 배포하였습니다.<br>
-<a href src = "https://findex-production-84b9.up.railway.app/#/dashboard">🌐<b>링크</b></a>
+🌐링크 https://findex-production-84b9.up.railway.app/#/dashboard
 
 
 
