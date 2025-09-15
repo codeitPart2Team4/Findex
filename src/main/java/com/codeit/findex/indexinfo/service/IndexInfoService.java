@@ -55,16 +55,18 @@ public class IndexInfoService {
                 request.favorite()
         );
 
-        // 신규 생성시 자동 연동 설정도 비활성화 상태로 생성
+        // 1. IndexInfo 먼저 save
+        IndexInfo saved = indexInfoRepository.save(indexInfo);
+
+        // 2. AutoSyncConfig 생성
         autoSyncConfigRepository.save(
                 AutoSyncConfig.builder()
-                        .indexInfo(indexInfo)
+                        .indexInfo(saved)
                         .enabled(false)
                         .build()
         );
 
-
-        return indexInfoMapper.toDto(indexInfoRepository.save(indexInfo));
+        return indexInfoMapper.toDto(saved);
     }
 
     public IndexInfoDto findById(Long indexInfoId) {
