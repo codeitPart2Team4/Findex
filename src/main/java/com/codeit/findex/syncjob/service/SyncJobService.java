@@ -73,7 +73,7 @@ public class SyncJobService {
                 })
                 .flatMap(Collection::stream)
                 .toList();
-    }
+}
 
     public CursorPageResponse<SyncJobDto> getSyncJobs(
             String          jobType,

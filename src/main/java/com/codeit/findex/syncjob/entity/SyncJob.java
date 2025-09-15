@@ -47,11 +47,16 @@ public class SyncJob extends BaseEntity {
     public boolean equals(Object object) {
         if (object == null || getClass() != object.getClass()) return false;
         SyncJob syncJob = (SyncJob) object;
-        return Objects.equals(indexInfo, syncJob.indexInfo) && Objects.equals(jobType, syncJob.jobType) && Objects.equals(targetDate, syncJob.targetDate);
+
+        Long thisIndexInfoId = this.indexInfo != null ? this.indexInfo.getId() : null;
+        Long otherIndexInfoId = syncJob.indexInfo != null ? syncJob.indexInfo.getId() : null;
+
+        return Objects.equals(thisIndexInfoId, otherIndexInfoId) && Objects.equals(jobType, syncJob.jobType) && Objects.equals(targetDate, syncJob.targetDate);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(indexInfo, jobType, targetDate);
+        Long indexInfoId = indexInfo != null ? indexInfo.getId() : null;
+        return Objects.hash(indexInfoId, jobType, targetDate);
     }
 }
