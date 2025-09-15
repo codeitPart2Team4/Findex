@@ -6,37 +6,82 @@
   <img src="/src/main/resources/static/assets/Findex-logo.png" width="800" height="600" alt="Findex Logo"/>
 </a>
 
-📌 지수 정보 제공 웹사이트<br>
-💡 목표: 사용자 친화적인 지수 정보와 자동화 데이터 제공<br>
+지수 정보 제공 웹사이트<br>
+목표: 사용자 친화적인 지수 정보와 자동화 데이터 제공<br>
 
 
 ---
 
-## 🚀 프로젝트 소개
-💹 한눈에 보는 금융 지수 데이터!<br>
+## 프로젝트 소개
+한눈에 보는 금융 지수 데이터!<br>
 Findex는 외부 Open API와 연동하여 금융 지수 데이터를 제공하는 <b>대시보드 서비스</b>입니다.<br>
 사용자는 직관적인 UI에서 금융 지수의 흐름을 파악하고, 자동 연동 기능을 통해 최신 데이터를 분석할 수 있습니다.<br>
-지수별 <b>성과 분석, 이동평균선 계산, 자동 데이터 업데이트 기능</b>을 통해 가볍고 강력한 금융 분석 도구를 경험해 보세요! 📈📊
+지수별 <b>성과 분석, 이동평균선 계산, 자동 데이터 업데이트 기능</b>을 통해 가볍고 강력한 금융 분석 도구를 경험해 보세요.
 
 ---
-## 🔧 기술 스택
+## 팀원 소개
+- 김준교(https://github.com/rlawnsry)
+- 김유민(https://github.com/kimyumin03)
+- 김동규(https://github.com/redmatoda)
+- 임재혁(https://github.com/JaehyeokLim)
+- 임승택(https://github.com/lsttsl2019)
 
-- <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/java/java-original.svg" width="40" height="40"/> Java
-  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/spring/spring-original.svg" width="40" height="40"/> Spring Boot
-- <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/postgresql/postgresql-original.svg" width="40" height="40" /> PostgreSQL
-  <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" width="40"/> Git hub
-- <img src="https://static1.smartbear.co/swagger/media/assets/swagger_fav.png" width="40" height="40"/> Swagger
-
-
-
-
-- ![H2 Database](https://img.shields.io/badge/H2-Database-blue)
-  ![QueryDSL](https://img.shields.io/badge/QueryDSL-0769AD?logoColor=white)
-  ![MapStruct](https://img.shields.io/badge/MapStruct-5C4EE5?style=flat&logoColor=white)
-  ![Gradle](https://img.shields.io/badge/Gradle-02303A?style=flat&logo=gradle&logoColor=white)
-  ![Temurin](https://img.shields.io/badge/Temurin-17-339933?style=flat&logoColor=white)
 ---
-## ⚡ 구현 기능
+## 팀원별 구현 기능 상세
+### 김유민 임승택
+#### 1. 대시보드 관리
+- 여러 지수의 최근 성과 요약, 시계열 차트(MA5/MA20), 성과 랭킹, 상세 목록+필터/정렬, CSV 내보내기를 한 화면에서 제공
+- 대량 데이터에서도 빠른 응답을 위해 커서 기반 페이지네이션과 집계 규칙(기간 마감 종가) 적용
+- 즐겨찾기된 지수의 현재 종가, 전일 대비(등락/등락률) 카드형 요약
+- 각 기간 버킷의 마감일 종가(대표값) + MA5/MA20 오버레이를 통한 지수 차트(시계열 + 이동평균) 구현
+- 전일/전주/전월 대비 등락률 내림차순으로 성과 분석 랭킹 구현
+#### 2. 지수 데이터 관리
+- 지수 데이터 CRUD 기능 구현
+- CSV Export 구현
+- 차트(DAILY/WEEKLY/MONTHLY/QUARTERLY/YEARLY) + MA5/MA20 성과 랭킹(등락률 desc, 동률 시 대비 desc) 구현
+
+### 임재혁
+#### 1. 지수 정보 관리
+- 지수 정보 CRUD 기능 구현
+- 대량 데이터에 대비한 커서 기반 페이지네이션 및 분류명, 지수명, 종목 수, ID 기준으로 정렬 기능 적용
+- 즐겨찾기(favorite) 및 요약 조회 API 기능 구현
+- Querydsl 기반 정렬 및 커서 조건 적용 방식 유지
+- 기존 오프셋 기반 요소 제거 후 불필요한 Page 객체 생성 과정 제거
+#### 2. 공통 에러
+- 도메인별 ErrorCode 및 Exception 정의 추가
+- BaseErrorCode, BaseException 기반 전역 예외 처리 인프라 구축
+- GlobalExceptionHandler를 커스텀 예외 처리 구조로 리팩토링
+
+#### 3. 배포 설정
+- application.yml에서 로컬 DB 설정 제거
+- Railway에서 제공하는 환경변수(DATABASE_URL, POSTGRES_USER, POSTGRES_PASSWORD)를 사용하도록 수정
+
+### 김준교
+####  1. 연동 작업 및 자동 연동 설정 관리
+- API 파싱 및 DataBase에 데이터 삽입
+- 지수 데이터 및 정보 연동
+- 연동 작업 목록 조회 기능 구현
+- API 연동 자동화 서비스(ApiAutoSyncService) 및 Scheduler 추가
+- API 응답 구조(header, body, items 등)를 DTO로 정의
+- 파싱 전용 모듈(FindexApiParser)과 일부 API 호출 로직 추가
+
+### 김동규
+#### 1. 자동 연동 설정 관리
+- 자동 연동 설정 조회 및 수정 API 구현
+- 컨트롤러에서 id 파라미터 타입 문제 해결 및 ResponseEntity 반환 타입 명확화
+- 활성화 버튼 클릭 시 발생하던 빈 데이터 행 생성 문제 수정
+- id 검증 로직 추가 및 유효하지 않은 id 요청에 대해 400 Bad Request 처리
+---
+## 기술 스택
+- 언어 : Java
+- 프레임워크 : Spring Boot, Tomcat
+- 데이터베이스 : PostgreSQL, Spring Data JPA, QueryDSL
+- 빌드 및 의존성 관리 도구 : Gradle
+- 인프라 : Railway
+- API 문서 : Swagger
+- 기타 도구 : MapStruct, 공공데이터포털 API
+---
+## 구현 기능
 ### 1) Open API 연동
 - 공공데이터포털 등 외부 Open API 연동 준비/구성 (인증키/요청 파라미터/쿼터 관리)
 ### 2) 지수 정보 관리
@@ -63,35 +108,35 @@ Findex는 외부 Open API와 연동하여 금융 지수 데이터를 제공하�
 - 지수 성과 분석 랭킹
 
 ---
-## 🌐 구현 홈페이지
+## 구현 홈페이지
 Railway를 이용하여 배포하였습니다.<br>
-🌐https://findex-production-84b9.up.railway.app/#/dashboard
+https://findex-production-84b9.up.railway.app/#/dashboard
 
 
 
 ---
-## 📝 프로젝트 구조
+## 프로젝트 구조
 
 <details>
   <summary>프로젝트 구조 보기</summary>
 
 ```text
 .
-├── 📝 README.md
-├── 📝 HELP.md
-├── 📄 build.gradle
-├── 📄 class-diagram.puml
-├── 📂 gradle/wrapper/
-│   ├── 📄 gradle-wrapper.jar
-│   └── 📄 gradle-wrapper.properties
-├── 📄 gradlew
-├── 📄 gradlew.bat
-├── 📄 settings.gradle
-└── 📂 src/
+├── README.md
+├── HELP.md
+├── build.gradle
+├── class-diagram.puml
+├── gradle/wrapper/
+│   ├── gradle-wrapper.jar
+│   └── gradle-wrapper.properties
+├── gradlew
+├── gradlew.bat
+├── settings.gradle
+└── src/
     ├── main/
     │   ├── java/com/codeit/findex/
-    │   │   ├── 🚀 FindexApplication.java
-    │   │   ├── 📂 autosync/
+    │   │   ├── FindexApplication.java
+    │   │   ├── autosync/
     │   │   │   ├── controller/AutoSyncConfigController.java
     │   │   │   ├── dto/
     │   │   │   │   ├── AutoSyncConfigDto.java
@@ -104,7 +149,7 @@ Railway를 이용하여 배포하였습니다.<br>
     │   │   │   │   ├── AutoSyncConfigQueryRepositoryImpl.java
     │   │   │   │   └── AutoSyncConfigRepository.java
     │   │   │   └── service/AutoSyncConfigService.java
-    │   │   ├── 📂 common/
+    │   │   ├── common/
     │   │   │   ├── dto/PageResponse.java
     │   │   │   ├── entity/BaseEntity.java
     │   │   │   ├── enums/SortDirection.java
@@ -124,10 +169,10 @@ Railway를 이용하여 배포하였습니다.<br>
     │   │   │           ├── IndexDataException.java
     │   │   │           ├── IndexInfoException.java
     │   │   │           └── SyncJobException.java
-    │   │   ├── 📂 config/
+    │   │   ├── config/
     │   │   │   ├── QuerydslConfig.java
     │   │   │   └── WebConfig.java
-    │   │   ├── 📂 data/
+    │   │   ├── data/
     │   │   │   ├── ApiDataDBService.java
     │   │   │   ├── AutoIndexDataSyncService.java
     │   │   │   ├── DataSyncRepository.java
@@ -139,7 +184,7 @@ Railway를 이용하여 배포하였습니다.<br>
     │   │   │   │   ├── Items.java
     │   │   │   │   └── Response.java
     │   │   │   └── scheduler/IndexApiScheduler.java
-    │   │   ├── 📂 indexdata/
+    │   │   ├── indexdata/
     │   │   │   ├── controller/
     │   │   │   │   ├── IndexDataApi.java
     │   │   │   │   ├── IndexDataController.java
@@ -168,7 +213,7 @@ Railway를 이용하여 배포하였습니다.<br>
     │   │   │   └── service/
     │   │   │       ├── IndexDataExtraService.java
     │   │   │       └── IndexDataService.java
-    │   │   ├── 📂 indexinfo/
+    │   │   ├── indexinfo/
     │   │   │   ├── controller/IndexInfoController.java
     │   │   │   ├── dto/
     │   │   │   │   ├── IndexInfoCreateRequest.java
@@ -182,7 +227,7 @@ Railway를 이용하여 배포하였습니다.<br>
     │   │   │   │   ├── IndexInfoQueryRepositoryImpl.java
     │   │   │   │   └── IndexInfoRepository.java
     │   │   │   └── service/IndexInfoService.java
-    │   │   └── 📂 syncjob/
+    │   │   └── syncjob/
     │   │       ├── controller/SyncJobController.java
     │   │       ├── dto/
     │   │       │   ├── IndexDataSyncRequest.java
@@ -199,7 +244,7 @@ Railway를 이용하여 배포하였습니다.<br>
     │       ├── schema.sql
     │       └── static/
     │           ├── assets/
-    │           │   ├── 🖼 Findex-logo.png
+    │           │   ├── Findex-logo.png
     │           │   ├── index-CGZC7fCi.js
     │   │       │   └── index-Dtn62Xmo.css
     │           ├── favicon.ico
@@ -208,13 +253,5 @@ Railway를 이용하여 배포하였습니다.<br>
         └── FindexApplicationTests.java
 ```
 </details>
-
----
-
-## 📊 Class-diagram
-
-프로젝트의 주요 엔티티 클래스 구조는 다음과 같습니다. 수평적 레이아웃으로 설계되어 있어 클래스 간의 관계를 쉽게 파악할 수 있습니다.
-
-클래스 다이어그램은 `class-diagram.puml` 파일에서 확인할 수 있으며, PlantUML을 사용하여 생성되었습니다.
 
 ---
