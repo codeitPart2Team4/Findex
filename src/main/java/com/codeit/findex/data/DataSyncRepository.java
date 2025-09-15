@@ -11,6 +11,7 @@ import com.codeit.findex.syncjob.repository.SyncJobRepository;
 import lombok.RequiredArgsConstructor;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -214,8 +215,8 @@ public class DataSyncRepository {
     @Transactional
     public Set<SyncJob> storeIndexInfoToDb(List<Item> items, String ip) {
         Set<SyncJob> syncJobsList = new HashSet<>();
-        List<IndexInfo> indexInfoBatch = new ArrayList<>();
-        List<SyncJob> syncJobBatch = new ArrayList<>();
+        Set<IndexInfo> indexInfoBatch = new HashSet<>();
+        Set<SyncJob> syncJobBatch = new HashSet<>();
 
         for (Item item : items) {
             IndexInfo indexInfo = toIndexInfo(item);
@@ -250,10 +251,9 @@ public class DataSyncRepository {
 
     @Transactional
     public Set<SyncJob> storeIndexDataToDb(List<Item> items, String ip) {
-        Set<SyncJob> syncJobsList = new HashSet<>();
-        List<IndexInfo> indexInfoBatch = new ArrayList<>();
-        List<IndexData> indexDataBatch = new ArrayList<>();
-        List<SyncJob> syncJobBatch = new ArrayList<>();
+        Set<IndexInfo> indexInfoBatch = new HashSet<>();
+        Set<IndexData> indexDataBatch = new HashSet<>();
+        Set<SyncJob> syncJobBatch = new HashSet<>();
 
         for (Item item : items) {
             IndexInfo indexInfo = toIndexInfo(item);
@@ -275,20 +275,50 @@ public class DataSyncRepository {
                 indexInfoBatch.add(indexInfo);
             }
 
-            IndexData indexData = toIndexData(item, indexInfo);
-            indexDataBatch.add(indexData);
+            IndexData indexData = indexDataRepository.findByIndexInfoAndBaseDate(
+                            existedIndexInfo != null ? existedIndexInfo : indexInfo, item.getBasDt())
+                    .orElse(null);
 
-            SyncJob syncJob = toSyncJob(item, indexInfo, "INDEX_DATA");
-            syncJob.setWorker(ip);
-            syncJobBatch.add(syncJob);
+            if (indexData == null) {
+                IndexData newIndexData = toIndexData(item, existedIndexInfo);
+                indexDataBatch.add(newIndexData);
+            } else {
+                indexData.setBaseDate(item.getBasDt());
+                indexData.setMarketPrice(item.getMkp());
+                indexData.setClosingPrice(item.getClpr());
+                indexData.setHighPrice(item.getHipr());
+                indexData.setLowPrice(item.getLopr());
+                indexData.setVersus(item.getVs());
+                indexData.setFluctuationRate(item.getFltRt());
+                indexData.setTradingQuantity(item.getTrqu());
+                indexData.setTradingPrice(item.getTrPrc());
+                indexData.setMarketTotalAmount(item.getLstgMrktTotAmt());
+                indexData.setSourceType(SourceType.OPEN_API);
+                indexDataBatch.add(indexData);
+            }
+
+            SyncJob existingSyncJobOpt = syncJobRepository.findByIndexInfoAndJobTypeAndTargetDate(
+                    indexInfo, "INDEX_DATA", item.getBasDt()
+            ).orElse(null);
+
+            if (existingSyncJobOpt == null) {
+                SyncJob syncJob = toSyncJob(item, indexInfo, "INDEX_DATA");
+                syncJob.setWorker(ip);
+                syncJobBatch.add(syncJob);
+            } else {
+                existingSyncJobOpt.setTargetDate(item.getBasDt());
+                existingSyncJobOpt.setJobType("INDEX_DATA");
+                existingSyncJobOpt.setWorker(ip);
+                existingSyncJobOpt.setResult("SUCCESS");
+            }
+
         }
 
         indexInfoRepository.saveAll(indexInfoBatch);
         indexDataRepository.saveAll(indexDataBatch);
         syncJobRepository.saveAll(syncJobBatch);
 
-        syncJobsList.addAll(syncJobBatch);
-        return syncJobsList;
+        return syncJobBatch;
     }
 
     private boolean entityEquals(IndexInfo a, IndexInfo b) {
