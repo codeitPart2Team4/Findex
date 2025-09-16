@@ -2,7 +2,7 @@
 
 프로젝트 상세 구현 기능은 <b>노션</b>에서 확인할 수 있습니다.(<b>이미지 클릭</b>)<br>
 
-<a href="https://infrequent-reason-3ed.notion.site/FINDEX-26f736a08e8180ed85d7f642b6a73317">
+<a href="https://findex4team.notion.site/FINDEX-26f736a08e8180ed85d7f642b6a73317">
   <img src="/src/main/resources/static/assets/Findex-logo.png" width="800" height="600" alt="Findex Logo"/>
 </a>
 
