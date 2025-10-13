@@ -1,4 +1,4 @@
-# Findex
+[4팀_FINDEX_발표자료.pdf](https://github.com/user-attachments/files/22879331/4._FINDEX_.pdf)# Findex
 
 프로젝트 상세 구현 기능은 <b>노션</b>에서 확인할 수 있습니다.(<b>이미지 클릭</b>)<br>
 
@@ -108,7 +108,9 @@ Findex는 외부 Open API와 연동하여 금융 지수 데이터를 제공하�
 Railway를 이용하여 배포하였습니다.<br>
 https://findex-production-84b9.up.railway.app/#/dashboard
 
-
+---
+## ERD
+<img width="1263" height="605" alt="스크린샷 2025-09-08 오후 4 28 17" src="https://github.com/user-attachments/assets/28f21b58-3a54-4f37-a51c-92a5d951c99c" />
 
 ---
 ## 프로젝트 구조
@@ -251,3 +253,5 @@ https://findex-production-84b9.up.railway.app/#/dashboard
 </details>
 
 ---
+## 발표 자료
+[4팀_FINDEX_발표자료.pdf](https://github.com/user-attachments/files/22879332/4._FINDEX_.pdf)
